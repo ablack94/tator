@@ -15,7 +15,7 @@ GLchar *vertex_shader_source =
 "#version 330 core\n\
 layout (location=0) in vec3 position;\n\
 void main(){\n\
-gl_Position = vec4(position.x, position.y, position.z, 1.0);\n\
+gl_Position = vec4(position.x, 0.5f - position.y, position.z, 1.0);\n\
 }\0";
 
 GLchar *fragment_shader_source =
@@ -100,8 +100,8 @@ int main(void) {
 		-0.5f, 0.5f, 0.0f
 	};
 	GLuint indices[] = {
-		0, 1, 3,
-		1, 2, 3
+		0, 1, 3
+		//1, 2, 3
 	};
 	// Make shapes
 	GLuint VBO, VAO, EBO;

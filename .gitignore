@@ -28,5 +28,9 @@
 *.out
 *.app
 
+# CMake cache
+CMakeFiles/
+CMakeCache.txt
+
 # Temp directories
 build/

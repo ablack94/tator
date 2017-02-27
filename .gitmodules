@@ -1,3 +1,6 @@
 [submodule "libs/glfw"]
 	path = libs/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "libs/soil"]
+	path = libs/soil
+	url = https://github.com/paralin/soil.git

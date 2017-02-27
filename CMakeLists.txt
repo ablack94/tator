@@ -4,15 +4,17 @@ project(tator)
 ##########################
 # LIBRARIES
 ##########################
-add_subdirectory("libs/glfw") # GLFW from source
-	set(GLEW_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/glew/include)
-	set(GLEW_LIBRARY_DEBUG 
-		${CMAKE_CURRENT_SOURCE_DIR}/libs/glew/lib/Release/Win32/glew32s.lib
-		)
-	set(GLEW_LIBRARY_RELEASE
-		${CMAKE_CURRENT_SOURCE_DIR}/libs/glew/lib/Release/Win32/glew32s.lib
-		)
+# ---- GLFW ----
+set(TATOR_LIBS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs)
+add_subdirectory(${TATOR_LIBS_DIR}/glfw) # GLFW from source
+# ---- GLEW ----
+set(GLEW_INCLUDE_DIR ${TATOR_LIBS_DIR}/glew/include)
+set(GLEW_LIBRARY_DEBUG ${TATOR_LIBS_DIR}/glew/lib/Release/Win32/glew32s.lib)
+set(GLEW_LIBRARY_RELEASE ${TATOR_LIBS_DIR}/glew/lib/Release/Win32/glew32s.lib)
 find_package(GLEW REQUIRED) # GLEW
+# ---- SOIL ----
+add_subdirectory(${TATOR_LIBS_DIR}/soil)
+# ---- OpenGL ----
 find_package(OpenGL REQUIRED) # OpenGL
 
 ##########################
@@ -26,18 +28,16 @@ set(TATOR_GRAPHICS_INCLUDE_DIR ${TATOR_INCLUDE_DIR}/graphics)
 # Sources and Headers
 ##########################
 
-# Graphics module
+# ---- Graphics module ----
 set(TATOR_GRAPHICS_SOURCE
 	${TATOR_SOURCE_DIR}/graphics/shader.cpp
 	)
-source_group("graphics" FILES ${TATOR_GRAPHICS_SOURCE})
-
 set(TATOR_GRAPHICS_HEADERS
 	${TATOR_INCLUDE_DIR}/graphics/shader.hpp
 	)
-source_group("graphics" FILES ${TATOR_GRAPHICS_HEADER})
+source_group("graphics" FILES ${TATOR_GRAPHICS_HEADERS} ${TATOR_GRAPHICS_SOURCE})
 	
-# All modules
+# ---- All modules ----
 set(TATOR_SOURCES
 	${TATOR_GRAPHICS_SOURCE}
 	)
@@ -55,11 +55,13 @@ target_include_directories(myapp SYSTEM PUBLIC
 	${OPENGL_INCLUDE_DIR} 
 	${GLEW_INCLUDE_DIRS}
 	glfw
+	soil
 )
-
-target_link_libraries(myapp ${OPENGL_LIBRARIES})
-target_link_libraries(myapp ${GLEW_LIBRARIES})
-target_link_libraries(myapp glfw)
-
+target_link_libraries(myapp
+	${OPENGL_LIBRARIES}
+	${GLEW_LIBRARIES}
+	glfw
+	soil
+)
 
 

@@ -1,14 +1,15 @@
-#define GLEW_STATIC
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+
+#include "tator/graphics/gl.hpp"
 
 #include <iostream>
 #include <exception>
 
-class TatorException : std::exception {
-public:
-	TatorException(const char *msg) : std::exception(msg) {}
-};
+#include "tator/system/TatorException.hpp"
+	using tator::system::TatorException;
+
+#include "tator/graphics/Shader.hpp"
+	using tator::graphics::VertexShader;
+	using tator::graphics::FragmentShader;
 
 // Shaders
 GLchar *vertex_shader_source =
@@ -85,12 +86,19 @@ int main(void) {
 		throw TatorException("Failed to initialize GLEW");
 	}
 	// Compile shaders
-	GLuint fragment_shader = compileFragmentShader(fragment_shader_source);
-	GLuint vertex_shader = compileVertexShader(vertex_shader_source);
+	//GLuint fragment_shader = compileFragmentShader(fragment_shader_source);
+	//GLuint vertex_shader = compileVertexShader(vertex_shader_source);
+	FragmentShader fragment_shader(fragment_shader_source);
+	VertexShader vertex_shader(vertex_shader_source);
+
+	fragment_shader.compile();
+	vertex_shader.compile();
+
 	// Make shader program
-	GLuint sprog = createShaderProgram({vertex_shader, fragment_shader});
-	glDeleteShader(fragment_shader);
-	glDeleteShader(vertex_shader);
+	GLuint sprog = createShaderProgram({vertex_shader.getId(), fragment_shader.getId()});
+	
+	fragment_shader.destroy();
+	vertex_shader.destroy();
 
 	// Data
 	GLfloat vertices[] = {

@@ -1,4 +1,5 @@
 
+#include "Windows.h"
 #include "tator/graphics/gl.hpp"
 
 #include <iostream>
@@ -10,6 +11,15 @@
 #include "tator/graphics/Shader.hpp"
 	using tator::graphics::VertexShader;
 	using tator::graphics::FragmentShader;
+
+#include <glm/vec3.hpp>
+	using glm::vec3;
+#include <glm/vec4.hpp>
+	using glm::vec4;
+#include <glm/mat4x4.hpp>
+	using glm::mat4;
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
 
 // Shaders
 GLchar *vertex_shader_source =
@@ -68,16 +78,17 @@ GLuint createShaderProgram(std::initializer_list<GLuint> shaders) {
 	return shader_program;
 }
 
-int main(void) {
+int main() {
+	FreeConsole();
 	// Create window
 	GLFWwindow *window;
 	if (!glfwInit()) {
-		return -1;
+		throw TatorException("Failed to initialize GLFW");
 	}
 	window = glfwCreateWindow(640, 480, "Hello World!", NULL, NULL);
 	if (!window) {
 		glfwTerminate();
-		return -1;
+		throw TatorException("Failed to create window!");
 	}
 	glfwMakeContextCurrent(window);
 	// Initialize GLEW
@@ -88,10 +99,12 @@ int main(void) {
 	// Compile shaders
 	//GLuint fragment_shader = compileFragmentShader(fragment_shader_source);
 	//GLuint vertex_shader = compileVertexShader(vertex_shader_source);
-	FragmentShader fragment_shader(fragment_shader_source);
-	VertexShader vertex_shader(vertex_shader_source);
+	GLuint t = glCreateShader(GL_VERTEX_SHADER);
 
+	FragmentShader fragment_shader(fragment_shader_source);
 	fragment_shader.compile();
+
+	VertexShader vertex_shader(vertex_shader_source);
 	vertex_shader.compile();
 
 	// Make shader program

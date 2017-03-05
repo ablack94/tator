@@ -1,6 +1,7 @@
 
 #include "Windows.h"
 #include "tator/graphics/gl.hpp"
+	using tator::graphics::GlBoundObject;
 
 #include <iostream>
 #include <exception>
@@ -10,6 +11,8 @@
 
 #include "tator/graphics/Shader.hpp"
 	using tator::graphics::Shader;
+#include "tator/graphics/ShaderProgram.hpp"
+	using tator::graphics::ShaderProgram;
 
 #include <glm/vec3.hpp>
 	using glm::vec3;
@@ -109,9 +112,16 @@ int _main() {
 	vertex_shader.compile();
 
 	// Make shader program
-	GLuint sprog = createShaderProgram({vertex_shader.getId(), fragment_shader.getId()});
-	fragment_shader.destroy();
+	//GLuint sprog = createShaderProgram({vertex_shader.getId(), fragment_shader.getId()});
+	//fragment_shader.destroy();
+	//vertex_shader.destroy();
+
+	ShaderProgram sp;
+	sp.addShader(&vertex_shader);
+	sp.addShader(&fragment_shader);
+	sp.compile();
 	vertex_shader.destroy();
+	fragment_shader.destroy();
 
 	// Data
 	GLfloat vertices[] = {
@@ -139,6 +149,7 @@ int _main() {
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 			// Determine what data is sent to the vertex shader
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), (GLvoid*)0);
+			glVertexAttribPointer(1, 3, GL_FLOAT, )
 			glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0); // unbind
 	glBindVertexArray(0); // unbind
@@ -168,14 +179,14 @@ int _main() {
 		glClearColor(0.5f, 0.5f, 0.5f, 1.f); // Set color to white
 		glClear(GL_COLOR_BUFFER_BIT); // Clear buffer to set clear color
 		// Draw
-		glUseProgram(sprog);
+		{ GlBoundObject({ sp });
+			// Bind textures
+			glBindTexture(GL_TEXTURE_2D, texture1);
 
-		// Bind textures
-		glBindTexture(GL_TEXTURE_2D, texture1);
-
-		glBindVertexArray(VAO); // bind
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0); // unbind
+			glBindVertexArray(VAO); // bind
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0); // unbind
+		}
 
 		// Display
 		glfwSwapBuffers(window);

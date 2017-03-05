@@ -11,17 +11,19 @@
 
 namespace tator {
 namespace graphics {
+namespace detail {
+	class IShader {
+	public:
+		virtual void bind();
+		virtual void unbind();
+		virtual void destroy();
+		virtual bool compile(GLint* success, GLuint* id, std::string* error);
+		virtual bool isCompiled();
+	};
+}
+using detail::IShader;
 
-class IShaderInterface {
-public:
-	virtual void bind();
-	virtual void unbind();
-	virtual void destroy();
-	virtual bool compile(GLint* success, GLuint* id, std::string* error);
-	virtual bool isCompiled();
-};
-
-class Shader : public IShaderInterface, public GlObject {
+class Shader : public IShader, public GlObject {
 public:
 	// Constructors / Destructors
 	Shader(GLenum type);
@@ -47,11 +49,11 @@ protected:
 	GLenum type;
 	std::string source;
 
-	IShaderInterface *state;
-	void setState(IShaderInterface* new_state);
+	IShader *state;
+	void setState(IShader* new_state);
 
 private:
-	class _UncompiledShader : public IShaderInterface {
+	class _UncompiledShader : public IShader {
 	public:
 		// Constructor(s) / Destructor
 		_UncompiledShader(Shader& shader);
@@ -64,7 +66,7 @@ private:
 		Shader& shader;
 	};
 
-	class _CompiledShader : public IShaderInterface {
+	class _CompiledShader : public IShader {
 	public:
 		// Constructor(s) / Destructor
 		_CompiledShader(Shader& shader);

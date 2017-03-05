@@ -2,7 +2,7 @@
 // February 26, 2017
 
 #include "tator/graphics/shader.hpp"
-	using tator::graphics::IShaderInterface;
+	using tator::graphics::IShader;
 	using tator::graphics::Shader;
 
 #include "tator/system/TatorException.hpp"
@@ -15,19 +15,19 @@
 IShaderInterface default
 */
 #define _ISHADER_INTERFACE_DEFAULT_ERROR "Invalid operation."
-void IShaderInterface::bind() {
+void IShader::bind() {
 	throw TatorException(_ISHADER_INTERFACE_DEFAULT_ERROR);
 }
-void IShaderInterface::unbind() {
+void IShader::unbind() {
 	throw TatorException(_ISHADER_INTERFACE_DEFAULT_ERROR);
 }
-void IShaderInterface::destroy() {
+void IShader::destroy() {
 	throw TatorException(_ISHADER_INTERFACE_DEFAULT_ERROR);
 }
-bool IShaderInterface::compile(GLint* success, GLuint* id, std::string* error) {
+bool IShader::compile(GLint* success, GLuint* id, std::string* error) {
 	throw TatorException(_ISHADER_INTERFACE_DEFAULT_ERROR);
 }
-bool IShaderInterface::isCompiled() {
+bool IShader::isCompiled() {
 	throw TatorException(_ISHADER_INTERFACE_DEFAULT_ERROR);
 }
 
@@ -179,7 +179,7 @@ bool Shader::isCompiled() {
 	return this->state->isCompiled();
 }
 
-void Shader::setState(IShaderInterface* new_state) {
+void Shader::setState(Shader::IShader* new_state) {
 	if (this->state != NULL)
 		delete this->state;
 	this->state = new_state;

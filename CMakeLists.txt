@@ -45,12 +45,15 @@ set(TATOR_SYSTEM_INCLUDE_DIR ${_TATOR_INCLUDE_DIR}/system)
 
 # ---- Graphics module ----
 set(TATOR_GRAPHICS_SOURCE
+	${TATOR_SOURCE_DIR}/graphics/gl.cpp
 	${TATOR_SOURCE_DIR}/graphics/Shader.cpp
+	${TATOR_SOURCE_DIR}/graphics/ShaderProgram.cpp
 	${TATOR_SOURCE_DIR}/graphics/Camera.cpp
 	)
 set(TATOR_GRAPHICS_HEADERS
 	${_TATOR_INCLUDE_DIR}/graphics/gl.hpp
 	${_TATOR_INCLUDE_DIR}/graphics/Shader.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/ShaderProgram.hpp
 	${_TATOR_INCLUDE_DIR}/graphics/Camera.hpp
 	)
 source_group("graphics" FILES ${TATOR_GRAPHICS_HEADERS} ${TATOR_GRAPHICS_SOURCE})
@@ -85,13 +88,13 @@ target_include_directories(tator SYSTEM PUBLIC
 	${GLEW_INCLUDE_DIRS}
 	glm
 	glfw
-)
+	)
 target_link_libraries(tator
 	${OPENGL_LIBRARIES}
 	${GLEW_LIBRARIES}
 	glm
 	glfw
-)
+	)
 
 add_subdirectory(examples)
 

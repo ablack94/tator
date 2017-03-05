@@ -12,7 +12,7 @@
 namespace tator {
 namespace system {
 
-class TatorException : std::exception {
+class TatorException : public std::exception {
 public:
 	TatorException() : std::exception() {}
 	TatorException(string str) : std::exception(str.c_str()) {}

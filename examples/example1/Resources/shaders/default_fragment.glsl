@@ -1,11 +1,10 @@
 #version 330 core
-# Inputs
-in vec2 iTexCoord;
-# Outputs
-out vec4 oColor;
-# Globals
+in vec2 texCoord;
+
+out vec4 color;
+
 uniform sampler2D texture1;
 
 void main() {
-	oColor = texture(texture1, iTexCoord);
+	color = texture(texture1, texCoord);
 }

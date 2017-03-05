@@ -9,8 +9,7 @@
 	using tator::system::TatorException;
 
 #include "tator/graphics/Shader.hpp"
-	using tator::graphics::VertexShader;
-	using tator::graphics::FragmentShader;
+	using tator::graphics::Shader;
 
 #include <glm/vec3.hpp>
 	using glm::vec3;
@@ -20,6 +19,8 @@
 	using glm::mat4;
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/constants.hpp>
+
+#include "../soil/inc/SOIL/SOIL.h"
 
 // Shaders
 GLchar *vertex_shader_source =
@@ -71,15 +72,16 @@ GLuint createShaderProgram(std::initializer_list<GLuint> shaders) {
 	GLint success;
 	GLchar infoLog[512];
 	glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
-	if (!success) {
+	if (success == GLEW_OK) {
+		return shader_program;
+	} else {
 		glGetProgramInfoLog(shader_program, 512, NULL, infoLog);
 		throw TatorException(infoLog);
 	}
-	return shader_program;
 }
 
-int main() {
-	FreeConsole();
+int _main() {
+	//FreeConsole();
 	// Create window
 	GLFWwindow *window;
 	if (!glfwInit()) {
@@ -101,15 +103,13 @@ int main() {
 	//GLuint vertex_shader = compileVertexShader(vertex_shader_source);
 	GLuint t = glCreateShader(GL_VERTEX_SHADER);
 
-	FragmentShader fragment_shader(fragment_shader_source);
+	Shader fragment_shader = Shader::fragmentShaderFromFile("Resources\\shaders\\default_fragment.glsl");
+	Shader vertex_shader = Shader::vertexShaderFromFile("Resources\\shaders\\default_vertex.glsl");
 	fragment_shader.compile();
-
-	VertexShader vertex_shader(vertex_shader_source);
 	vertex_shader.compile();
 
 	// Make shader program
 	GLuint sprog = createShaderProgram({vertex_shader.getId(), fragment_shader.getId()});
-	
 	fragment_shader.destroy();
 	vertex_shader.destroy();
 
@@ -143,7 +143,22 @@ int main() {
 		glBindBuffer(GL_ARRAY_BUFFER, 0); // unbind
 	glBindVertexArray(0); // unbind
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe
+	// Create textures
+	GLuint texture1;
+	glGenTextures(1, &texture1);
+	glBindTexture(GL_TEXTURE_2D, texture1); // bind
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		int twidth, theight;
+		unsigned char *image = SOIL_load_image("Resources/Textures/vader.jpg", &twidth, &theight, 0, SOIL_LOAD_RGB);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, twidth, theight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		SOIL_free_image_data(image);
+	glBindTexture(GL_TEXTURE_2D, 0); // unbind
+
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe
 
 	// Application loop
 	while (!glfwWindowShouldClose(window)) {
@@ -154,6 +169,10 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT); // Clear buffer to set clear color
 		// Draw
 		glUseProgram(sprog);
+
+		// Bind textures
+		glBindTexture(GL_TEXTURE_2D, texture1);
+
 		glBindVertexArray(VAO); // bind
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0); // unbind
@@ -166,12 +185,12 @@ int main() {
 	return 0;
 }
 
-int _main(void) {
+int main(void) {
 	try {
 		return _main();
 	}
 	catch (std::exception& exc) {
 		std::cerr << "Unhandled exception: " << exc.what() << std::endl;
-		system("pause");
+		throw exc;
 	}
 }

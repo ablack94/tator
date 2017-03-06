@@ -27,16 +27,16 @@ namespace detail {
 	};
 }
 
-class ShaderProgram : public detail::IShaderProgram, public GlObject {
+class ShaderProgram : public GlObject {
 public:
 	// Constructors / Destructors
 	ShaderProgram();
 	~ShaderProgram();
 
 	// GlObject
-	void bind();
-	void unbind();
-	void destroy();
+	virtual void bind() override;
+	virtual void unbind();
+	virtual void destroy();
 	// Functions
 	void addShader(Shader* shader);
 	void clearShaders();
@@ -58,6 +58,7 @@ private:
 		// Functions
 		void addShader(Shader* shader);
 		void clearShaders();
+		void destroy();
 		bool compile(GLint* success, GLuint* id, std::string* error);
 		bool isCompiled();
 	protected:

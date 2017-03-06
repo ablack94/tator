@@ -44,6 +44,9 @@ void ShaderProgram::_UncompiledShaderProgram::addShader(Shader* shader) {
 void ShaderProgram::_UncompiledShaderProgram::clearShaders() {
 	this->sp.shaders.clear();
 }
+void ShaderProgram::_UncompiledShaderProgram::destroy() {
+
+}
 bool ShaderProgram::_UncompiledShaderProgram::compile(GLint* success, GLuint* id, std::string* error) {
 	if (this->isCompiled()) {
 		throw TatorException("ShaderProgram is already compiled. You must call destroy first.");
@@ -56,20 +59,21 @@ bool ShaderProgram::_UncompiledShaderProgram::compile(GLint* success, GLuint* id
 	glLinkProgram(_id);
 	// Validate
 	GLint _success;
-	GLchar info_log[512];
 	glGetProgramiv(_id, GL_LINK_STATUS, &_success);
-	bool result = (_success == GLEW_OK);
-	if (result) {
+	if (_success == GL_TRUE) {
 		this->sp.setId(_id);
 		this->sp.setState(new ShaderProgram::_CompiledShaderProgram(this->sp));
 		if (success != NULL) *success = _success;
 		if (id != NULL) *id = _id;
-	} else {
-		glDeleteProgram(_id);
-		glGetProgramInfoLog(_id, 512, NULL, info_log);
-		*error = std::string(info_log);
+		return true;
 	}
-	return result;
+	if(error != NULL) {
+		GLchar info[512];
+		glGetProgramInfoLog(_id, 512, NULL, info);
+		*error = std::string(info);
+	}
+	glDeleteProgram(_id);
+	return false;
 }
 bool ShaderProgram::_UncompiledShaderProgram::isCompiled() {
 	return false;

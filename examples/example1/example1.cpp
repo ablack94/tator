@@ -83,6 +83,25 @@ GLuint createShaderProgram(std::initializer_list<GLuint> shaders) {
 	}
 }
 
+typedef struct VertexData {
+	GLfloat position[3];
+	GLfloat color[3];
+	GLfloat tex[2];
+} VertexData;
+
+VertexData makeVertexData(glm::vec3 position, glm::vec3 color, glm::vec2 tex) {
+	VertexData vd;
+	vd.position[0] = position.x;
+	vd.position[1] = position.y;
+	vd.position[2] = position.z;
+	vd.color[0] = color.x;
+	vd.color[1] = color.y;
+	vd.color[2] = color.z;
+	vd.tex[0] = tex.x;
+	vd.tex[1] = tex.y;
+	return vd;
+}
+
 int _main() {
 	//FreeConsole();
 	// Create window
@@ -123,16 +142,21 @@ int _main() {
 	vertex_shader.destroy();
 	fragment_shader.destroy();
 
-	// Data
-	GLfloat vertices[] = {
-		0.5f, 0.5f, 0.0f,
-		0.5f, -0.5f, 0.0f,
-		-0.5f, -0.5f, 0.0f,
-		-0.5f, 0.5f, 0.0f
+
+	VertexData _vd[]{
+		makeVertexData(glm::vec3(0.5f,0.5f,0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 1.0f)),
+		makeVertexData(glm::vec3(0.5f,-0.5f,0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0, 0.0f)),
+		makeVertexData(glm::vec3(-0.5f,-0.5f,0.0f), glm::vec3(0.0f,0.0f,1.0f), glm::vec2(0.0f,0.0f)),
+		makeVertexData(glm::vec3(-0.5f,0.5f,0.0f), glm::vec3(1.0f,1.0f,0.0f), glm::vec2(0.0f,1.0f)),
 	};
+
+	char* vd = reinterpret_cast<char*>(_vd);
+	std::cout << sizeof(_vd) << " " << sizeof(VertexData) << std::endl;
+	std::cout << "BYTES: " << sizeof(_vd) * sizeof(VertexData) << std::endl;
+
 	GLuint indices[] = {
-		0, 1, 3
-		//1, 2, 3
+		0, 1, 3,
+		1, 2, 3
 	};
 	// Make shapes
 	GLuint VBO, VAO, EBO;
@@ -141,20 +165,32 @@ int _main() {
 	glGenBuffers(1, &EBO);
 	
 	glBindVertexArray(VAO);
+		//glVertexAttribFormat(0, 3, GL_FLOAT, GL_FALSE, offsetof(VertexData, position));
+		//glVertexAttribBinding(0, 0);
+		//glVertexAttribFormat(1, 3, GL_FLOAT, GL_FALSE, offsetof(VertexData, color));
+		//glVertexAttribBinding(1, 0);
+		//glVertexAttribFormat(2, 2, GL_FLOAT, GL_FALSE, offsetof(VertexData, tex));
+		//glVertexAttribBinding(2, 0);
 		// Send vertices to GPU
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+			//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(_vd), vd, GL_STATIC_DRAW);
 			// Send indices of shape to GPU
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 			// Determine what data is sent to the vertex shader
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), (GLvoid*)0);
-			glVertexAttribPointer(1, 3, GL_FLOAT, )
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (GLvoid*)0);
 			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (GLvoid*)(3 * sizeof(GLfloat)));
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (GLvoid*)(6 * sizeof(GLfloat)));
+			glEnableVertexAttribArray(2);
+
 		glBindBuffer(GL_ARRAY_BUFFER, 0); // unbind
 	glBindVertexArray(0); // unbind
 
 	// Create textures
+	/*
 	GLuint texture1;
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1); // bind
@@ -168,7 +204,7 @@ int _main() {
 		glGenerateMipmap(GL_TEXTURE_2D);
 		SOIL_free_image_data(image);
 	glBindTexture(GL_TEXTURE_2D, 0); // unbind
-
+	*/
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe
 
 	// Application loop
@@ -179,11 +215,19 @@ int _main() {
 		glClearColor(0.5f, 0.5f, 0.5f, 1.f); // Set color to white
 		glClear(GL_COLOR_BUFFER_BIT); // Clear buffer to set clear color
 		// Draw
-		{ GlBoundObject({ sp });
-			// Bind textures
-			glBindTexture(GL_TEXTURE_2D, texture1);
-
+		{ auto bound=GlBoundObject({ &sp });
+		glUseProgram(sp.getId());
+		  // Bind textures
+			//glBindTexture(GL_TEXTURE_2D, texture1);
+			GLfloat timeValue = glfwGetTime();
+			//GLfloat redValue = (cos(timeValue) / 2) + 0.5;
+			//GLfloat greenValue = (sin(timeValue) / 2) + 0.5;
+			//GLfloat blueValue = (sin(timeValue) / 2) + 0.5;
+			GLint colorLoc = glGetUniformLocation(sp.getId(), "time");
+			//glUniform4f(colorLoc, redValue, greenValue, blueValue, 1.0f);
+			glUniform1f(colorLoc, timeValue);
 			glBindVertexArray(VAO); // bind
+			//glDrawTriangles(VAO)
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0); // unbind
 		}
@@ -201,7 +245,7 @@ int main(void) {
 		return _main();
 	}
 	catch (std::exception& exc) {
-		std::cerr << "Unhandled exception: " << exc.what() << std::endl;
+		std::cout << "Unhandled exception: " << exc.what() << std::endl;
 		throw exc;
 	}
 }

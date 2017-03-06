@@ -62,16 +62,16 @@ void GlObject::setId(GLuint id) {
 GlBoundObject
 */
 
-GlBoundObject::GlBoundObject(std::initializer_list<GlObject> objects) {
+GlBoundObject::GlBoundObject(std::initializer_list<GlObject*> objects) {
 	for (auto obj : objects) {
-		obj.bind();
+		obj->bind();
 		this->objects.push_back(obj);
 	}
 }
 
 GlBoundObject::~GlBoundObject() {
 	for (auto obj : this->objects) {
-		obj.unbind();
+		obj->unbind();
 	}
 }
 

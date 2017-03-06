@@ -54,18 +54,19 @@ bool Shader::_UncompiledShader::compile(GLint* success, GLuint* id, std::string*
 	GLint _success;
 	glGetShaderiv(_id, GL_COMPILE_STATUS, &_success);
 	if (success != NULL) *success = _success;
-	if (_success) {
+	if (_success == GL_TRUE) {
 		this->shader.setId(_id);
 		this->shader.setState(new Shader::_CompiledShader(this->shader));
 		if (id != NULL) *id = _id;
 		return true;
-	} else if(error != NULL) {
-		// Get error details
+	}
+	// Get error details
+	if (error != NULL) {
 		GLchar info[512];
 		glGetShaderInfoLog(_id, 512, NULL, info);
 		*error = std::string(info);
-		return false;
 	}
+	glDeleteShader(_id);
 	return false;
 }
 
@@ -113,7 +114,7 @@ Shader::Shader(GLenum type) {
 Shader::Shader(GLenum type, std::string source) {
 	this->type = type;
 	this->source = source;
-	this->state = new Shader::_UncompiledShader(*this);
+	this->state = new Shader::_UncompiledShader(*this, source);
 }
 
 Shader::~Shader() { 

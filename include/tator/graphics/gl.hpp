@@ -36,10 +36,10 @@ private:
 
 class GlBoundObject {
 public:
-	GlBoundObject(std::initializer_list<GlObject> objects);
+	GlBoundObject(std::initializer_list<GlObject*> objects);
 	~GlBoundObject();
 protected:
-	std::vector<GlObject> objects;
+	std::vector<GlObject*> objects;
 };
 
 }

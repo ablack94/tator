@@ -16,7 +16,12 @@ public:
 	Camera(glm::vec3 position, glm::vec3 forward);
 	glm::mat4 getViewMatrix();
 
-	static Camera* fromLookAt(glm::vec3 position, glm::vec3 target);
+	static Camera fromLookAt(glm::vec3 position, glm::vec3 target);
+
+	glm::vec3 getPosition() { return this->position; }
+	glm::vec3 getForward() { return this->forward; }
+	glm::vec3 getUp() { return this->up; }
+	glm::vec3 getRight() { return this->right; }
 
 protected:
 	glm::vec3 position;

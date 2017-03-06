@@ -60,6 +60,7 @@ private:
 		_UncompiledShader(Shader& shader, std::string source);
 		~_UncompiledShader();
 		// Functions
+		virtual void destroy() override;
 		bool compile(GLint* success, GLuint* id, std::string* error);
 		bool isCompiled();
 	protected:

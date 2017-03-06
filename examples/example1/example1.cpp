@@ -14,14 +14,19 @@
 #include "tator/graphics/ShaderProgram.hpp"
 	using tator::graphics::ShaderProgram;
 
+#include "tator/graphics/Camera.hpp"
+	using tator::graphics::Camera;
+
 #include <glm/vec3.hpp>
 	using glm::vec3;
 #include <glm/vec4.hpp>
 	using glm::vec4;
 #include <glm/mat4x4.hpp>
 	using glm::mat4;
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/constants.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "../soil/inc/SOIL/SOIL.h"
 
@@ -102,6 +107,8 @@ VertexData makeVertexData(glm::vec3 position, glm::vec3 color, glm::vec2 tex) {
 	return vd;
 }
 
+GLuint screen_width = 640, screen_height = 480;
+
 int _main() {
 	//FreeConsole();
 	// Create window
@@ -109,7 +116,7 @@ int _main() {
 	if (!glfwInit()) {
 		throw TatorException("Failed to initialize GLFW");
 	}
-	window = glfwCreateWindow(640, 480, "Hello World!", NULL, NULL);
+	window = glfwCreateWindow(screen_width, screen_width, "Hello World!", NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		throw TatorException("Failed to create window!");
@@ -127,8 +134,12 @@ int _main() {
 
 	Shader fragment_shader = Shader::fragmentShaderFromFile("Resources\\shaders\\default_fragment.glsl");
 	Shader vertex_shader = Shader::vertexShaderFromFile("Resources\\shaders\\default_vertex.glsl");
-	fragment_shader.compile();
-	vertex_shader.compile();
+	std::cout << "Compiling fragment shader..." << std::endl;
+	bool _fs = fragment_shader.compile();
+	std::cout << "Compiling vertex shader..." << std::endl;
+	bool _vs = vertex_shader.compile();
+
+	std::cout << "Shaders done! FS: " << _fs << " VS: " << _vs << std::endl;
 
 	// Make shader program
 	//GLuint sprog = createShaderProgram({vertex_shader.getId(), fragment_shader.getId()});
@@ -190,7 +201,7 @@ int _main() {
 	glBindVertexArray(0); // unbind
 
 	// Create textures
-	/*
+	
 	GLuint texture1;
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1); // bind
@@ -204,10 +215,46 @@ int _main() {
 		glGenerateMipmap(GL_TEXTURE_2D);
 		SOIL_free_image_data(image);
 	glBindTexture(GL_TEXTURE_2D, 0); // unbind
-	*/
+	
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe
 
 	// Application loop
+
+	glm::vec3 cube_positions[] = {
+		glm::vec3(0.0f,0.0f,0.0f),
+		glm::vec3(0.5f,0.0f,0.0f),
+		glm::vec3(0.0f,0.0f,2.0f),
+	};
+
+	Camera c = Camera::fromLookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0));
+	glm::mat4 projection = glm::perspective(45.0f,
+		(float)screen_width / (float)screen_height, 0.1f, 1000.0f);
+	glm::mat4 model;
+	glm::mat4 view = c.getViewMatrix();
+
+	std::cout << "Camera" << std::endl;
+	std::cout << "Position: " << c.getPosition().x << " " << c.getPosition().y << " " << c.getPosition().z << std::endl;
+	std::cout << "Forward: " << c.getForward().x << " " << c.getForward().y << " " << c.getForward().z << std::endl;
+	std::cout << "Up: " << c.getUp().x << " " << c.getUp().y << " " << c.getUp().z << std::endl;
+	std::cout << "--------------------------" << std::endl;
+	
+
+	for (int y = 0; y < 4; ++y) {
+		for (int x = 0; x < 4; ++x) {
+			std::cout << view[y][x] << " ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl << std::endl;
+
+	glm::mat4 view2 = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	for (int y = 0; y < 4; ++y) {
+		for (int x = 0; x < 4; ++x) {
+			std::cout << view2[y][x] << " ";
+		}
+		std::cout << std::endl;
+	}
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents(); // Check events
 		/* RENDERING */
@@ -216,21 +263,35 @@ int _main() {
 		glClear(GL_COLOR_BUFFER_BIT); // Clear buffer to set clear color
 		// Draw
 		{ auto bound=GlBoundObject({ &sp });
-		glUseProgram(sp.getId());
-		  // Bind textures
-			//glBindTexture(GL_TEXTURE_2D, texture1);
+			glUseProgram(sp.getId());
+			model = glm::translate(model, glm::vec3(0, 0, 0));
+			//model = glm::scale(model, glm::vec3(1.2f, 1.2f, 1.2f));
 			GLfloat timeValue = glfwGetTime();
-			//GLfloat redValue = (cos(timeValue) / 2) + 0.5;
-			//GLfloat greenValue = (sin(timeValue) / 2) + 0.5;
-			//GLfloat blueValue = (sin(timeValue) / 2) + 0.5;
+
+			GLint loc_model = glGetUniformLocation(sp.getId(), "model");
+			glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(model));
+			GLint loc_view = glGetUniformLocation(sp.getId(), "view");
+			glUniformMatrix4fv(loc_view, 1, GL_FALSE, glm::value_ptr(view));
+			GLint loc_projection = glGetUniformLocation(sp.getId(), "projection");
+			glUniformMatrix4fv(loc_projection, 1, GL_FALSE, glm::value_ptr(projection));
 			GLint colorLoc = glGetUniformLocation(sp.getId(), "time");
-			//glUniform4f(colorLoc, redValue, greenValue, blueValue, 1.0f);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture1);
+			glUniform1i(glGetUniformLocation(sp.getId(), "texture1"), 0);
+
 			glUniform1f(colorLoc, timeValue);
 			glBindVertexArray(VAO); // bind
-			//glDrawTriangles(VAO)
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			for (glm::vec3 p : cube_positions) {
+				glm::mat4 _m;
+				_m = glm::translate(_m, p);
+				//_m = glm::rotate(_m, 45.0f, glm::vec3(0,1,0));
+				glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(_m));
+				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			}
 			glBindVertexArray(0); // unbind
 		}
+
 
 		// Display
 		glfwSwapBuffers(window);

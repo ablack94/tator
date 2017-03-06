@@ -11,8 +11,8 @@ Camera::Camera(glm::vec3 position, glm::vec3 forward) {
 	this->update();
 }
 
-Camera* Camera::fromLookAt(glm::vec3 position, glm::vec3 target) {
-	return new Camera(position, glm::normalize(position - target));
+Camera Camera::fromLookAt(glm::vec3 position, glm::vec3 target) {
+	return Camera(position, (target - position));
 }
 
 

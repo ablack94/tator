@@ -44,6 +44,8 @@ Shader::_UncompiledShader::_UncompiledShader(Shader& shader, std::string source)
 
 Shader::_UncompiledShader::~_UncompiledShader() { }
 
+void Shader::_UncompiledShader::destroy() { }
+
 bool Shader::_UncompiledShader::compile(GLint* success, GLuint* id, std::string* error) {
 	// Compile shader
 	GLuint _id = glCreateShader(this->shader.type);

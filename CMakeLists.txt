@@ -29,6 +29,9 @@ add_subdirectory(${TATOR_DEPS_DIR}/soil)
 add_subdirectory(${TATOR_DEPS_DIR}/glm)
 # ---- OpenGL ----
 find_package(OpenGL REQUIRED) # OpenGL
+# ---- Assimp ----
+#add_subdirectory(${TATOR_DEPS_DIR}/assimp)
+#add_subdirectory(${TATOR_DEPS_DIR}/cgal)
 
 ##########################
 # Tator variables
@@ -46,23 +49,36 @@ set(TATOR_SYSTEM_INCLUDE_DIR ${_TATOR_INCLUDE_DIR}/system)
 # ---- Graphics module ----
 set(TATOR_GRAPHICS_SOURCE
 	${TATOR_SOURCE_DIR}/graphics/gl.cpp
+	${TATOR_SOURCE_DIR}/graphics/OpenGLRenderer.cpp
 	${TATOR_SOURCE_DIR}/graphics/Shader.cpp
 	${TATOR_SOURCE_DIR}/graphics/ShaderProgram.cpp
 	${TATOR_SOURCE_DIR}/graphics/Camera.cpp
+	${TATOR_SOURCE_DIR}/graphics/Mesh.cpp
+	${TATOR_SOURCE_DIR}/graphics/Renderable.cpp
+	${TATOR_SOURCE_DIR}/graphics/StandardMesh.cpp
 	)
 set(TATOR_GRAPHICS_HEADERS
 	${_TATOR_INCLUDE_DIR}/graphics/gl.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/Renderer.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/OpenGLRenderer.hpp
 	${_TATOR_INCLUDE_DIR}/graphics/Shader.hpp
 	${_TATOR_INCLUDE_DIR}/graphics/ShaderProgram.hpp
 	${_TATOR_INCLUDE_DIR}/graphics/Camera.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/Mesh.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/Renderable.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/StandardMesh.hpp
 	)
 source_group("graphics" FILES ${TATOR_GRAPHICS_HEADERS} ${TATOR_GRAPHICS_SOURCE})
 	
 # ---- System module ----
-set(TATOR_SYSTEM_SOURCE ""
+set(TATOR_SYSTEM_SOURCE
+	${TATOR_SOURCE_DIR}/system/Core.cpp
+	${TATOR_SOURCE_DIR}/system/Window.cpp
 	)
 set(TATOR_SYSTEM_HEADERS
 	${_TATOR_INCLUDE_DIR}/system/TatorException.hpp
+	${_TATOR_INCLUDE_DIR}/system/Core.hpp
+	${_TATOR_INCLUDE_DIR}/system/Window.hpp
 	)
 source_group("system" FILES ${TATOR_SYSTEM_HEADERS} ${TATOR_SYSTEM_SOURCE})
 	

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(examples)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/example1")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/example2")
 
 # Testing/Development project
 #set(EXAMPLE1_DIR ${CMAKE_CURRENT_SOURCE_DIR}/example1)

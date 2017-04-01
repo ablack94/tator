@@ -10,15 +10,16 @@
 #include "tator/system/TatorException.hpp"
 	using tator::system::TatorException;
 
-//#include "tator/graphics/Shader.hpp"
-//	using tator::graphics::Shader;
-//#include "tator/graphics/ShaderProgram.hpp"
-//	using tator::graphics::ShaderProgram;
+
+#include "tator/graphics/Shader.hpp"
+	using tator::graphics::Shader;
+#include "tator/graphics/ShaderProgram.hpp"
+	using tator::graphics::ShaderProgram;
 
 #include "tator/graphics/Renderer.hpp"
-	using tator::graphics::Shader;
-	using tator::graphics::ShaderOpenGL;
-	using tator::graphics::ShaderOpenGLFactory;
+//	using tator::graphics::Shader;
+//	using tator::graphics::ShaderOpenGL;
+//	using tator::graphics::ShaderOpenGLFactory;
 	using tator::graphics::GameObject;
 	using tator::graphics::Component;
 	using tator::graphics::TexturedQuadComponent;
@@ -144,15 +145,22 @@ int _main() {
 		throw TatorException("Failed to initialize GLEW");
 	}
 
-	OpenGLRenderer renderer;
+	Shader fs = Shader::fragmentShaderFromFile("Resources\\shaders\\default_fragment.glsl");
+	if (!fs.compile()) throw std::runtime_error("Unable to compile fragment shader");
+	Shader vs = Shader::vertexShaderFromFile("Resources\\shaders\\default_vertex.glsl");
+	if (!vs.compile()) throw std::runtime_error("Unable to compile vertex shader");
+
+	OpenGLRenderer renderer(fs, vs);
+
+	Quad *q = renderer.getFactory().createQuad();
 
 	// Compile shaders
 	//GLuint fragment_shader = compileFragmentShader(fragment_shader_source);
 	//GLuint vertex_shader = compileVertexShader(vertex_shader_source);
-	GLuint t = glCreateShader(GL_VERTEX_SHADER);
+	//GLuint t = glCreateShader(GL_VERTEX_SHADER);
 
-	ShaderOpenGL fragment_shader = ShaderOpenGLFactory::fragmentShaderFromFile("Resources\\shaders\\default_fragment.glsl");
-	ShaderOpenGL vertex_shader = ShaderOpenGLFactory::vertexShaderFromFile("Resources\\shaders\\default_vertex.glsl");
+	//ShaderOpenGL fragment_shader = ShaderOpenGLFactory::fragmentShaderFromFile("Resources\\shaders\\default_fragment.glsl");
+	//ShaderOpenGL vertex_shader = ShaderOpenGLFactory::vertexShaderFromFile("Resources\\shaders\\default_vertex.glsl");
 	//std::cout << "Compiling fragment shader..." << std::endl;
 	//bool _fs = fragment_shader.compile();
 	//std::cout << "Compiling vertex shader..." << std::endl;
@@ -165,14 +173,16 @@ int _main() {
 	//fragment_shader.destroy();
 	//vertex_shader.destroy();
 
+	/*
 	ShaderProgram sp;
 	sp.addShader(&vertex_shader);
 	sp.addShader(&fragment_shader);
 	sp.compile();
 	vertex_shader.destroy();
 	fragment_shader.destroy();
+	*/
 
-
+	/*
 	VertexData _vd[]{
 		makeVertexData(glm::vec3(0.5f,0.5f,0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 1.0f)),
 		makeVertexData(glm::vec3(0.5f,-0.5f,0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0, 0.0f)),
@@ -218,9 +228,9 @@ int _main() {
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0); // unbind
 	glBindVertexArray(0); // unbind
-
+	*/
 	// Create textures
-	/*
+	
 	GLuint texture1;
 	glGenTextures(1, &texture1);
 	glBindTexture(GL_TEXTURE_2D, texture1); // bind
@@ -234,14 +244,16 @@ int _main() {
 		glGenerateMipmap(GL_TEXTURE_2D);
 		SOIL_free_image_data(image);
 	glBindTexture(GL_TEXTURE_2D, 0); // unbind
-	*/
+	
 
+	/*
 	int twidth, theight;
 	unsigned char *img = SOIL_load_image("Resources/Textures/vader.jpg", &twidth, &theight, 0, SOIL_LOAD_RGB);
 	std::cout << SOIL_last_result() << std::endl;
 	std::string _img((char*)img, twidth*theight * 3);
 	SOIL_free_image_data(img);
 	Texture2D *_texture1 = renderer.getFactory().createTexture(_img, twidth, theight, TextureFormat::RGB, TextureWrap::REPEAT, TextureWrap::REPEAT, TextureInterpolation::LINEAR, TextureInterpolation::LINEAR);
+	*/
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe
 
@@ -253,7 +265,7 @@ int _main() {
 		glm::vec3(0.0f,0.0f,2.0f),
 	};
 
-	Camera c = Camera::fromLookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0));
+	Camera c = Camera::fromLookAt(glm::vec3(0, 0, 2), glm::vec3(0, 0, 0));
 	glm::mat4 projection = glm::perspective(45.0f,
 		(float)screen_width / (float)screen_height, 0.1f, 1000.0f);
 	glm::mat4 model;
@@ -287,6 +299,9 @@ int _main() {
 	double last_time = glfwGetTime();
 	uint32_t frame_count = 0;
 
+	renderer.setProjection(projection);
+	renderer.setView(view);
+
 	while (!glfwWindowShouldClose(window)) {
 		// time per frame
 		double current_time = glfwGetTime();
@@ -300,30 +315,43 @@ int _main() {
 		glfwPollEvents(); // Check events
 		/* RENDERING */
 		// Clear backbuffer
-		glClearColor(0.5f, 0.5f, 0.5f, 1.f); // Set color to white
+		glClearColor(0.1f, 0.1f, 0.1f, 1.f); // Set color to white
 		glClear(GL_COLOR_BUFFER_BIT); // Clear buffer to set clear color
 		// Draw
-		{ auto bound=GlBoundObject({ &sp });
-			glUseProgram(sp.getId());
-			model = glm::translate(model, glm::vec3(0, 0, 0));
+		//{ auto bound=GlBoundObject({ &sp });
+			//glUseProgram(sp.getId());
+			//model = glm::translate(model, glm::vec3(0, 0, 0));
 			//model = glm::scale(model, glm::vec3(1.2f, 1.2f, 1.2f));
 			GLfloat timeValue = glfwGetTime();
+			glm::mat4 model;
+			model = glm::translate(model, glm::vec3(0, 0, 0));
+			//model = glm::scale(model, glm::vec3(1.2f, 1.2f, 1.2f));
+			model = glm::rotate(model, rotation, glm::vec3(0, 1, 0));
+			//model = glm::scale(model, glm::vec3(2, 2, 2));
+			//model = glm::rotate(model, r1, glm::vec3(1, 0, 0));
+			//model = glm::rotate(model, r2, glm::vec3(0, 0, 1));
 
-			GLint loc_model = glGetUniformLocation(sp.getId(), "model");
-			glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(model));
-			GLint loc_view = glGetUniformLocation(sp.getId(), "view");
-			glUniformMatrix4fv(loc_view, 1, GL_FALSE, glm::value_ptr(view));
-			GLint loc_projection = glGetUniformLocation(sp.getId(), "projection");
-			glUniformMatrix4fv(loc_projection, 1, GL_FALSE, glm::value_ptr(projection));
-			GLint colorLoc = glGetUniformLocation(sp.getId(), "time");
+			q->setTransform(model);
 
-			glActiveTexture(GL_TEXTURE0);
+			renderer.setTime(timeValue);
+			renderer.draw(*q);
+
+			//GLint loc_model = glGetUniformLocation(sp.getId(), "model");
+			//glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(model));
+			//GLint loc_view = glGetUniformLocation(sp.getId(), "view");
+			//glUniformMatrix4fv(loc_view, 1, GL_FALSE, glm::value_ptr(view));
+			//GLint loc_projection = glGetUniformLocation(sp.getId(), "projection");
+			//glUniformMatrix4fv(loc_projection, 1, GL_FALSE, glm::value_ptr(projection));
+			//GLint colorLoc = glGetUniformLocation(sp.getId(), "time");
+
+			//glActiveTexture(GL_TEXTURE0);
 			//glBindTexture(GL_TEXTURE_2D, texture1);
-			_texture1->prepare();
-			glUniform1i(glGetUniformLocation(sp.getId(), "texture1"), 0);
+			//_texture1->prepare();
+			//glUniform1i(glGetUniformLocation(sp.getId(), "texture1"), 0);
 
-			glUniform1f(colorLoc, timeValue);
+			//glUniform1f(colorLoc, timeValue);
 			//glBindVertexArray(VAO); // bind
+			/*
 			for (glm::vec3 p : cube_positions) {
 				glm::mat4 _m;
 				_m = glm::translate(_m, p);
@@ -334,7 +362,7 @@ int _main() {
 				glBindVertexArray(VAO);
 				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 				glBindVertexArray(0);
-			}
+			} */
 			rotation += 0.001f;
 			if (rotation >= 360) { rotation = 0.0f; }
 			r1 += 0.1f;
@@ -342,7 +370,7 @@ int _main() {
 			r2 += 0.05f;
 			if (r2 >= 360) { r2 = 0.0f; }
 			//glBindVertexArray(0); // unbind
-		}
+		//}
 
 		// Display
 		glfwSwapBuffers(window);

@@ -12,8 +12,20 @@ using tator::graphics::TextureFormat;
 using tator::graphics::TextureWrap;
 using tator::graphics::TextureInterpolation;
 
+using tator::graphics::Quad;
+using tator::graphics::IQuad;
+
 #include "tator/graphics/gl.hpp"
 using tator::graphics::GlObject;
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include "tator/graphics/shader.hpp"
+using tator::graphics::Shader;
+#include "tator/graphics/ShaderProgram.hpp"
+using tator::graphics::ShaderProgram;
 
 #include <map>
 
@@ -21,6 +33,7 @@ namespace tator {
 namespace graphics {
 namespace opengl {
 namespace detail {
+
 class OpenGLTexture2D : public Texture2D, public GlObject {
 public:
 	OpenGLTexture2D(std::string data, int width, int height, int texture_format) {
@@ -68,6 +81,50 @@ public:
 protected:
 	int gl_texture_format;
 };
+
+class OpenGlQuad : public IQuad {
+public:
+	GLfloat data[12] = { 0.5f, 0.5f, 0.0f,
+		0.5f, -0.5f, 0.0f,
+		-0.5f, -0.5f, 0.0f,
+		-0.5f, 0.5f, 0.0f };
+	GLuint indices[6] = { 0, 1, 3, 1, 2, 3 };
+	OpenGlQuad() {
+		glGenVertexArrays(1, &VAO);
+		glGenBuffers(1, &VBO);
+		glGenBuffers(1, &EBO);
+
+		glBindVertexArray(VAO);
+
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+		// Position attribute
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(0);
+
+		glBindVertexArray(0); // Unbind VAO
+	}
+
+	~OpenGlQuad() {
+		//glDeleteVertexArrays(1, &VAO);
+		//glDeleteBuffers(1, &VBO);
+		//glDeleteBuffers(1, &EBO);
+	}
+
+	void draw() override {
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+	}
+
+protected:
+	GLuint VBO, VAO, EBO;
+};
+
 } // detail
 using namespace detail;
 
@@ -83,18 +140,64 @@ public:
 			TextureInterpolation mag_interp) {
 		return new OpenGLTexture2D(data, width, height, GL_RGB);
 	}
+
+	Quad* createQuad() {
+		return new Quad(new OpenGlQuad());
+	}
+
 protected:
 	OpenGLRenderer &renderer;
 };
 
 class OpenGLRenderer : public Renderer {
 public:
-	OpenGLRenderer() : fact(*this) { }
+	OpenGLRenderer(Shader frag_shader, Shader vert_shader) : fact(*this) { 
+		default_sp.addShader(&frag_shader);
+		default_sp.addShader(&vert_shader);
+		if (!default_sp.compile()) {
+			throw std::runtime_error("Bad shaders");
+		}
+	}
+
+	void setView(glm::mat4 view) {
+		this->view = view;
+	}
+
+	void setProjection(glm::mat4 projection) {
+		this->projection = projection;
+	}
+
+	void setTime(GLfloat time) {
+		this->time = time;
+	}
 
 	RendererFactory& getFactory() {
 		return this->fact;
 	}
+
+	void draw(IRenderable& renderable) {
+		default_sp.bind();
+		// Set shader params
+		
+		GLint loc_model = glGetUniformLocation(default_sp.getId(), "model");
+		glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(renderable.getTransform()));
+		GLint loc_view = glGetUniformLocation(default_sp.getId(), "view");
+		glUniformMatrix4fv(loc_view, 1, GL_FALSE, glm::value_ptr(view));
+		GLint loc_projection = glGetUniformLocation(default_sp.getId(), "projection");
+		glUniformMatrix4fv(loc_projection, 1, GL_FALSE, glm::value_ptr(projection));
+		GLint loc_time = glGetUniformLocation(default_sp.getId(), "time");
+		glUniform1f(loc_time, time);
+
+		// Draw stuff
+		renderable.draw();
+		default_sp.unbind();
+	}
+
 protected:
+	GLfloat time;
+	glm::mat4 view;
+	glm::mat4 projection;
+	ShaderProgram default_sp;
 	OpenGLRendererFactory fact;
 };
 

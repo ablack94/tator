@@ -96,7 +96,7 @@ protected:
 	TextureWrap wrap_s, wrap_t;
 	TextureInterpolation min_filter, mag_filter;
 };
-
+/*
 class Shader {
 public:
 	enum class Type { OPENGL, DIRECTX };
@@ -174,7 +174,8 @@ public:
 private:
 	ShaderOpenGLFactory() { }
 };
-
+*/
+/*
 class MaterialOption {
 public:
 	enum class Type { UNKNOWN, STRING, FLOAT, DOUBLE, VEC2, VEC3, VEC4, TEXTURE2D };
@@ -227,6 +228,7 @@ public:
 protected:
 	std::map<std::string, MaterialOption> options;
 };
+*/
 
 class TexturedQuadComponent : public Component {
 public:
@@ -242,6 +244,41 @@ protected:
 	Texture2D *texture;
 };
 
+class IRenderable {
+public:
+	virtual glm::mat4 getTransform() = 0;
+	virtual void setTransform(glm::mat4 m) = 0;
+	virtual void draw() { }
+};
+
+class IQuad {
+public:
+	virtual void draw() = 0;
+};
+
+class Quad : public IRenderable {
+public:
+	Quad(IQuad *implementor) {
+		this->implementor = implementor;
+	}
+
+	glm::mat4 getTransform() override {
+		return transform;
+	}
+
+	void setTransform(glm::mat4 m) override {
+		transform = m;
+	}
+
+	void draw() override {
+		implementor->draw();
+	}
+
+protected:
+	glm::mat4 transform;
+	IQuad *implementor;
+};
+
 
 class RendererFactory {
 public:
@@ -250,11 +287,14 @@ public:
 		TextureFormat format, TextureWrap wrap_s,
 		TextureWrap wrap_t, TextureInterpolation min_interp,
 		TextureInterpolation mag_interp) = 0;
+
+	virtual Quad* createQuad() = 0;
 };
 
 class Renderer {
 public:
 	virtual RendererFactory& getFactory() = 0;
+	virtual void draw(IRenderable& renderable) = 0;
 };
 
 } // graphics

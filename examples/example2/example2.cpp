@@ -152,7 +152,17 @@ int _main() {
 
 	OpenGLRenderer renderer(fs, vs);
 
+	ShaderProgram default_sp;
+	default_sp.addShader(&fs);
+	default_sp.addShader(&vs);
+	default_sp.compile();
+
+	Material *default_mat = renderer.getFactory().createMaterial(&vs, &fs);
+
 	Quad *q = renderer.getFactory().createQuad();
+	q->setMaterial(default_mat);
+
+
 
 	// Compile shaders
 	//GLuint fragment_shader = compileFragmentShader(fragment_shader_source);
@@ -332,8 +342,12 @@ int _main() {
 			//model = glm::rotate(model, r2, glm::vec3(0, 0, 1));
 
 			q->setTransform(model);
-
-			renderer.setTime(timeValue);
+			//renderer.setTime(timeValue);
+		
+			q->getMaterial()->set("model", q->getTransform());
+			q->getMaterial()->set("view", view);
+			q->getMaterial()->set("projection", projection);
+			q->getMaterial()->set("time", timeValue);
 			renderer.draw(*q);
 
 			//GLint loc_model = glGetUniformLocation(sp.getId(), "model");

@@ -18,7 +18,7 @@ class Mesh : public Renderable {
 protected:
 	Mesh() { }
 	virtual ~Mesh() { }
-};
+}; 
 
 } // graphics
 } // tator

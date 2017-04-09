@@ -11,6 +11,7 @@ using tator::graphics::Texture2D;
 using tator::graphics::TextureFormat;
 using tator::graphics::TextureWrap;
 using tator::graphics::TextureInterpolation;
+using tator::graphics::Material;
 
 using tator::graphics::Quad;
 using tator::graphics::IQuad;
@@ -33,6 +34,61 @@ namespace tator {
 namespace graphics {
 namespace opengl {
 namespace detail {
+
+class OpenGlMaterial : public Material {
+public:
+	OpenGlMaterial(Shader* vs, Shader* fs) {
+		this->sp.addShader(vs);
+		this->sp.addShader(fs);
+		this->sp.compile();
+	}
+
+	void activate() {
+		this->sp.bind();
+		for (auto it = settings.begin(); it != settings.end(); ++it) {
+			GLint loc = glGetUniformLocation(this->sp.getId(), it->first.c_str());
+			glm::vec2 _v2;
+			glm::vec3 _v3;
+			glm::vec4 _v4;
+			glm::mat4 _m4;
+			if (loc != -1) {
+				switch (it->second->getType()) {
+				case MaterialSettingType::FLOAT:
+					glUniform1f(loc, it->second->getFloat());
+					break;
+				case MaterialSettingType::VEC2:
+					_v2 = it->second->getVector2();
+					glUniform2f(loc, _v2.x, _v2.y);
+					break;
+				case MaterialSettingType::VEC3:
+					_v3 = it->second->getVector3();
+					glUniform3f(loc, _v3.x, _v3.y, _v3.z);
+					break;
+				case MaterialSettingType::VEC4:
+					_v4 = it->second->getVector4();
+					glUniform4f(loc, _v4.x, _v4.y, _v4.z, _v4.w);
+					break;
+				case MaterialSettingType::MAT4:
+					_m4 = it->second->getMat4();
+					glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(_m4));
+					break;
+				}
+			}
+		}
+
+		/*
+		GLint loc_model = glGetUniformLocation(default_sp.getId(), "model");
+		glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(renderable.getTransform()));
+		GLint loc_view = glGetUniformLocation(default_sp.getId(), "view");
+		glUniformMatrix4fv(loc_view, 1, GL_FALSE, glm::value_ptr(view));
+		GLint loc_projection = glGetUniformLocation(default_sp.getId(), "projection");
+		glUniformMatrix4fv(loc_projection, 1, GL_FALSE, glm::value_ptr(projection));
+		GLint loc_time = glGetUniformLocation(default_sp.getId(), "time");
+		glUniform1f(loc_time, time);
+		*/
+		sp.unbind();
+	}
+};
 
 class OpenGLTexture2D : public Texture2D, public GlObject {
 public:
@@ -115,7 +171,7 @@ public:
 		//glDeleteBuffers(1, &EBO);
 	}
 
-	void draw() override {
+	void draw(IQuad& q) override {
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
@@ -139,6 +195,10 @@ public:
 			TextureWrap wrap_t, TextureInterpolation min_interp,
 			TextureInterpolation mag_interp) {
 		return new OpenGLTexture2D(data, width, height, GL_RGB);
+	}
+
+	Material* createMaterial(Shader* vs, Shader* fs) {
+		return new OpenGlMaterial(vs, fs);
 	}
 
 	Quad* createQuad() {
@@ -179,6 +239,7 @@ public:
 		default_sp.bind();
 		// Set shader params
 		
+		/*
 		GLint loc_model = glGetUniformLocation(default_sp.getId(), "model");
 		glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(renderable.getTransform()));
 		GLint loc_view = glGetUniformLocation(default_sp.getId(), "view");
@@ -187,8 +248,10 @@ public:
 		glUniformMatrix4fv(loc_projection, 1, GL_FALSE, glm::value_ptr(projection));
 		GLint loc_time = glGetUniformLocation(default_sp.getId(), "time");
 		glUniform1f(loc_time, time);
+		*/
 
 		// Draw stuff
+		renderable.getMaterial()->activate();
 		renderable.draw();
 		default_sp.unbind();
 	}

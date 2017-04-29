@@ -22,6 +22,8 @@ target_include_directories(example2 SYSTEM PUBLIC
 	glm
 	glfw
 	soil
+	${PYBIND11_INCLUDE_DIR}
+	${PYTHON_INCLUDE_DIRS}
 	)
 target_link_libraries(example2
 	tator
@@ -30,6 +32,7 @@ target_link_libraries(example2
 	glm
 	glfw
 	soil
+	${PYTHON_LIBRARIES}
 	)
 	
 source_group("Resources" FILES ${RESOURCES_FILES})
@@ -38,6 +41,7 @@ add_custom_command(TARGET example2 POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tator> $<TARGET_FILE_DIR:example2>
 	COMMAND ${CMAKE_COMMAND} -E copy ${TATOR_GLEW_SHARED_LIB} $<TARGET_FILE_DIR:example2>
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${EXAMPLE2_RESOURCES_DIR} "$<TARGET_FILE_DIR:example2>/../Resources"
+	COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_LIBRARIES} $<TARGET_FILE_DIR:example2>
 	)
 
 

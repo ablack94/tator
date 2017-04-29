@@ -27,8 +27,15 @@ message(STATUS "TATOR GLEW LIB: ${TATOR_GLEW_SHARED_LIB}")
 add_subdirectory(${TATOR_DEPS_DIR}/soil)
 # ---- GLM ----
 add_subdirectory(${TATOR_DEPS_DIR}/glm)
+# ---- pybind11 ----
+add_subdirectory(${TATOR_DEPS_DIR}/pybind11)
+find_package(PythonLibs REQUIRED) # python for pybind11
 # ---- OpenGL ----
 find_package(OpenGL REQUIRED) # OpenGL
+# ---- Lua ----
+set(LUA_LIBS ${TATOR_DEPS_DIR}/lua/lua53.lib)
+include_directories(${TATOR_DEPS_DIR}/lua/include)
+
 # ---- Assimp ----
 #add_subdirectory(${TATOR_DEPS_DIR}/assimp)
 #add_subdirectory(${TATOR_DEPS_DIR}/cgal)
@@ -41,6 +48,7 @@ set(TATOR_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(_TATOR_INCLUDE_DIR ${TATOR_INCLUDE_DIR}/tator) # used internally so we don't have to prefix tator to every path
 set(TATOR_GRAPHICS_INCLUDE_DIR ${_TATOR_INCLUDE_DIR}/graphics)
 set(TATOR_SYSTEM_INCLUDE_DIR ${_TATOR_INCLUDE_DIR}/system)
+set(TATOR_SCRIPTING_INCLUDE_DIR ${_TATOR_INCLUDE_DIR}/scripting)
 
 ##########################
 # Sources and Headers
@@ -82,14 +90,26 @@ set(TATOR_SYSTEM_HEADERS
 	)
 source_group("system" FILES ${TATOR_SYSTEM_HEADERS} ${TATOR_SYSTEM_SOURCE})
 	
+# ---- Scripting module ----
+set(TATOR_SCRIPTING_SOURCE
+	${TATOR_SOURCE_DIR}/scripting/PythonEngine.cpp
+	)
+set(TATOR_SCRIPTING_HEADERS
+	${_TATOR_INCLUDE_DIR}/scripting/ScriptEngine.hpp
+	${_TATOR_INCLUDE_DIR}/scripting/PythonEngine.hpp
+	)
+source_group("scripting" FILES ${TATOR_SCRIPTING_HEADERS} ${TATOR_SCRIPTING_SOURCE})
+	
 # ---- All modules ----
 set(TATOR_SOURCES
 	${TATOR_GRAPHICS_SOURCE}
 	${TATOR_SYSTEM_SOURCE}
+	${TATOR_SCRIPTING_SOURCE}
 	)
 set(TATOR_HEADERS
 	${TATOR_GRAPHICS_HEADERS}
 	${TATOR_SYSTEM_HEADERS}
+	${TATOR_SCRIPTING_HEADERS}
 	)
 
 ##########################
@@ -102,6 +122,8 @@ target_include_directories(tator SYSTEM PUBLIC
 	${TATOR_INCLUDE_DIR}
 	${OPENGL_INCLUDE_DIR}
 	${GLEW_INCLUDE_DIRS}
+	${PYBIND11_INCLUDE_DIR} # header only library
+	${PYTHON_INCLUDE_DIRS}
 	glm
 	glfw
 	)
@@ -110,6 +132,7 @@ target_link_libraries(tator
 	${GLEW_LIBRARIES}
 	glm
 	glfw
+	${PYTHON_LIBRARIES}
 	)
 
 add_subdirectory(examples)

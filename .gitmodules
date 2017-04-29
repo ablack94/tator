@@ -13,3 +13,9 @@
 [submodule "deps/assimp"]
 	path = deps/assimp
 	url = https://github.com/assimp/assimp.git
+[submodule "deps/pybind11"]
+	path = deps/pybind11
+	url = https://github.com/wjakob/pybind11.git
+[submodule "deps/lua"]
+	path = deps/lua
+	url = https://github.com/lua/lua.git

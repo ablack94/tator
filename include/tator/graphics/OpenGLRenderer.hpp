@@ -14,7 +14,6 @@ using tator::graphics::TextureInterpolation;
 using tator::graphics::Material;
 
 using tator::graphics::Quad;
-using tator::graphics::IQuad;
 
 #include "tator/graphics/gl.hpp"
 using tator::graphics::GlObject;
@@ -86,7 +85,7 @@ public:
 		GLint loc_time = glGetUniformLocation(default_sp.getId(), "time");
 		glUniform1f(loc_time, time);
 		*/
-		sp.unbind();
+		//sp.unbind();
 	}
 };
 
@@ -138,40 +137,241 @@ protected:
 	int gl_texture_format;
 };
 
-class OpenGlQuad : public IQuad {
+class OpenGlMesh : public Mesh {
 public:
-	GLfloat data[12] = { 0.5f, 0.5f, 0.0f,
-		0.5f, -0.5f, 0.0f,
-		-0.5f, -0.5f, 0.0f,
-		-0.5f, 0.5f, 0.0f };
-	GLuint indices[6] = { 0, 1, 3, 1, 2, 3 };
-	OpenGlQuad() {
+	OpenGlMesh() {
+		VBO = 0;
+		VAO = 0;
+		EBO = 0;
+	}
+
+	~OpenGlMesh() {
+		glDeleteVertexArrays(1, &VAO);
+		glDeleteBuffers(1, &VBO);
+		glDeleteBuffers(1, &EBO);
+	}
+
+	void draw() override {
+		if (data.getAttributeNames().size() == 0) return;
+		// Delete old buffers
+		glDeleteBuffers(1, &VBO);
+		glDeleteVertexArrays(1, &VAO);
+		glDeleteBuffers(1, &EBO);
+		// Generate geometry (horribly inefficient)
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
 		glGenBuffers(1, &EBO);
 
 		glBindVertexArray(VAO);
-
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
-
+		// Reserve space
+		int total_bytes = 0;
+		std::vector<std::string> attributes = data.getAttributeNames();
+		for (auto it = attributes.begin(); it != attributes.end(); ++it) {
+			switch (data.getAttribute(*it)->getType()) {
+			case VertexAttributeType::FLOAT:
+				total_bytes += sizeof(float) * data.getAttribute(*it)->getFloat().size();
+				break;
+			case VertexAttributeType::DOUBLE:
+				total_bytes += sizeof(double) * data.getAttribute(*it)->getDouble().size();
+				break;
+			case VertexAttributeType::UINT:
+				total_bytes += sizeof(uint32_t) * data.getAttribute(*it)->getUint().size();
+				break;
+			default:
+				throw std::runtime_error("Unsupported attribute type.");
+			}
+		}
+		glBufferData(GL_ARRAY_BUFFER, total_bytes, NULL, GL_STATIC_DRAW);
+		// Fill in data
+		std::map<std::string, int> offsets;
+		int offset = 0;
+		for (auto it = attributes.begin(); it != attributes.end(); ++it) {
+			int size = 0;
+			void *d = NULL;
+			switch (data.getAttribute(*it)->getType()) {
+			case VertexAttributeType::FLOAT:
+				size = sizeof(float)*data.getAttribute(*it)->getFloat().size();
+				d = data.getAttribute(*it)->getFloat().data();
+				break;
+			case VertexAttributeType::DOUBLE:
+				size = sizeof(double)*data.getAttribute(*it)->getDouble().size();
+				d = data.getAttribute(*it)->getDouble().data();
+				break;
+			case VertexAttributeType::UINT:
+				size = sizeof(uint32_t)*data.getAttribute(*it)->getUint().size();
+				d = data.getAttribute(*it)->getUint().data();
+				break;
+			}
+			offsets[*it] = offset;
+			glBufferSubData(GL_ARRAY_BUFFER, offset, size, d);
+		}
+		// Fill in indices
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-		// Position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-		glEnableVertexAttribArray(0);
-
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 
+			(sizeof(uint32_t)*data.getIndices().size()),
+			data.getIndices().data(), 
+			GL_STATIC_DRAW);
+		// Setup attributes
+		BaseVertexAttribute *attr = NULL;
+		std::vector<std::string> atts;
+		atts.assign({ "position","normal","color","tex_coord" });
+		int counter = 0;
+		for (auto it = atts.begin(); it != atts.end(); ++it) {
+			if ((attr = data.getAttribute(*it)) != NULL) {
+				int type = GL_FLOAT;
+				switch (attr->getType()) {
+				case VertexAttributeType::FLOAT:
+					type = GL_FLOAT;
+					break;
+				case VertexAttributeType::DOUBLE:
+					type = GL_DOUBLE;
+					break;
+				case VertexAttributeType::UINT:
+					type = GL_UNSIGNED_INT;
+					break;
+				}
+				glVertexAttribPointer(counter,
+					attr->getComponents(),
+					GL_FLOAT,
+					type,
+					0,
+					&offsets[*it]);
+				glEnableVertexAttribArray(counter);
+				++counter;
+			}
+		}
 		glBindVertexArray(0); // Unbind VAO
+		// Draw operations
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+	}
+
+protected:
+	GLuint VBO, VAO, EBO;
+};
+
+class OpenGlQuad : public Quad {
+public:
+	OpenGlQuad() : Quad() {
+		VAO = 0;
+		VBO = 0;
+		EBO = 0;
 	}
 
 	~OpenGlQuad() {
-		//glDeleteVertexArrays(1, &VAO);
-		//glDeleteBuffers(1, &VBO);
-		//glDeleteBuffers(1, &EBO);
+		glDeleteVertexArrays(1, &VAO);
+		glDeleteBuffers(1, &VBO);
+		glDeleteBuffers(1, &EBO);
 	}
 
-	void draw(IQuad& q) override {
+	void draw() override {
+		if (data.getAttributeNames().size() == 0) return;
+		// Delete old buffers
+		if(VBO != 0) glDeleteBuffers(1, &VBO);
+		if(VAO != 0) glDeleteVertexArrays(1, &VAO);
+		if(EBO != 0) glDeleteBuffers(1, &EBO);
+		// Generate geometry (horribly inefficient)
+		glGenVertexArrays(1, &VAO);
+		glGenBuffers(1, &VBO);
+		glGenBuffers(1, &EBO);
+
+		glBindVertexArray(VAO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		// Reserve space
+		int total_bytes = 0;
+		std::vector<std::string> attributes = data.getAttributeNames();
+		for (auto it = attributes.begin(); it != attributes.end(); ++it) {
+			switch (data.getAttribute(*it)->getType()) {
+			case VertexAttributeType::FLOAT:
+				total_bytes += sizeof(float) * data.getAttribute(*it)->getFloat().size();
+				break;
+			case VertexAttributeType::DOUBLE:
+				total_bytes += sizeof(double) * data.getAttribute(*it)->getDouble().size();
+				break;
+			case VertexAttributeType::UINT:
+				total_bytes += sizeof(uint32_t) * data.getAttribute(*it)->getUint().size();
+				break;
+			default:
+				throw std::runtime_error("Unsupported attribute type.");
+			}
+		}
+		glBufferData(GL_ARRAY_BUFFER, total_bytes, NULL, GL_STATIC_DRAW);
+		// Fill in data
+		std::map<std::string, int> offsets;
+		int offset = 0;
+		for (auto it = attributes.begin(); it != attributes.end(); ++it) {
+			int size = 0;
+			void *d = NULL;
+			switch (data.getAttribute(*it)->getType()) {
+			case VertexAttributeType::FLOAT:
+				size = sizeof(float)*data.getAttribute(*it)->getFloat().size();
+				d = data.getAttribute(*it)->getFloat().data();
+				break;
+			case VertexAttributeType::DOUBLE:
+				size = sizeof(double)*data.getAttribute(*it)->getDouble().size();
+				d = data.getAttribute(*it)->getDouble().data();
+				break;
+			case VertexAttributeType::UINT:
+				size = sizeof(uint32_t)*data.getAttribute(*it)->getUint().size();
+				d = data.getAttribute(*it)->getUint().data();
+				break;
+			}
+			offsets[*it] = offset;
+			glBufferSubData(GL_ARRAY_BUFFER, offset, size, d);
+			offset += size;
+		}
+		// Fill in indices
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+			(sizeof(uint32_t)*data.getIndices().size()),
+			data.getIndices().data(),
+			GL_STATIC_DRAW);
+		// Setup attributes
+		BaseVertexAttribute *attr = NULL;
+		std::vector<std::string> atts;
+		atts.assign({ "position","normal","color","tex_coord" });
+		int counter = 0;
+		for (auto it = atts.begin(); it != atts.end(); ++it) {
+			if ((attr = data.getAttribute(*it)) != NULL) {
+				switch (attr->getType()) {
+				case VertexAttributeType::FLOAT:
+					glVertexAttribPointer(counter,
+						attr->getComponents(),
+						GL_FLOAT,
+						GL_FALSE,
+						0,
+						(GLvoid*)(offsets[*it]));
+						//(GLvoid*)(offsets[*it] * sizeof(float)));
+					glEnableVertexAttribArray(counter);
+					break;
+				case VertexAttributeType::DOUBLE:
+					glVertexAttribPointer(counter,
+						attr->getComponents(),
+						GL_DOUBLE,
+						GL_FALSE,
+						0,
+						(GLvoid*)(offsets[*it]));
+						//(GLvoid*)(offsets[*it] * sizeof(double)));
+					glEnableVertexAttribArray(counter);
+					break;
+				case VertexAttributeType::UINT:
+					glVertexAttribPointer(counter,
+						attr->getComponents(),
+						GL_UNSIGNED_INT,
+						GL_FALSE,
+						0,
+						(GLvoid*)(offsets[*it]));
+						//(GLvoid*)(offsets[*it] * sizeof(uint32_t)));
+					glEnableVertexAttribArray(counter);
+					break;
+				}
+			}
+			++counter;
+		}
+		glBindVertexArray(0); // Unbind VAO
+							  // Draw operations
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
@@ -202,7 +402,7 @@ public:
 	}
 
 	Quad* createQuad() {
-		return new Quad(new OpenGlQuad());
+		return new OpenGlQuad();
 	}
 
 protected:
@@ -235,8 +435,8 @@ public:
 		return this->fact;
 	}
 
-	void draw(IRenderable& renderable) {
-		default_sp.bind();
+	void draw(Renderable& renderable) {
+		//default_sp.bind();
 		// Set shader params
 		
 		/*
@@ -253,7 +453,7 @@ public:
 		// Draw stuff
 		renderable.getMaterial()->activate();
 		renderable.draw();
-		default_sp.unbind();
+		//default_sp.unbind();
 	}
 
 protected:

@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <map>
+#include <memory>
 #include <fstream>
 #include "glm/glm.hpp"
 #include "gl.hpp"
@@ -99,140 +100,6 @@ protected:
 	TextureWrap wrap_s, wrap_t;
 	TextureInterpolation min_filter, mag_filter;
 };
-/*
-class Shader {
-public:
-	enum class Type { OPENGL, DIRECTX };
-	Shader(Type type) {
-		this->type = type;
-	}
-	virtual ~Shader() { }
-protected:
-	Type type;
-};
-
-class ShaderOpenGL : public Shader, public GlObject {
-public:
-	enum class GlShaderType : GLenum { VERTEX=GL_VERTEX_SHADER, FRAGMENT=GL_FRAGMENT_SHADER, GEOMETRY=GL_GEOMETRY_SHADER };
-	ShaderOpenGL(GlShaderType type, std::string code) 
-			: Shader(Type::OPENGL), GlObject() {
-		this->type = type;
-		this->code = code;
-		this->compile();
-	}
-
-	void destroy() override {
-		if (this->hasId()) {
-			glDeleteShader(this->getId());
-			GlObject::destroy();
-		}
-	}
-
-protected:
-	void compile() {
-		// Compile shader
-		GLuint _id = glCreateShader((GLenum)this->type);
-		const char *c = this->code.c_str();
-		glShaderSource(_id, 1, &c, NULL);
-		glCompileShader(_id);
-		// Validate
-		GLint success;
-		glGetShaderiv(_id, GL_COMPILE_STATUS, &success);
-		if (success == GL_TRUE) {
-			this->setId(_id);
-		}
-		else {
-			// Get error details
-			GLchar info[512];
-			glGetShaderInfoLog(_id, 512, NULL, info);
-			glDeleteShader(_id);
-			throw std::runtime_error("Unable to compile shader: " + std::string(info));
-		}
-	}
-
-	GlShaderType type;
-	std::string code;
-};
-
-class ShaderOpenGLFactory {
-public:
-
-	static ShaderOpenGL fragmentShaderFromFile(std::string file_path) {
-		return shaderFromFile(ShaderOpenGL::GlShaderType::FRAGMENT, file_path);
-	}
-	static ShaderOpenGL vertexShaderFromFile(std::string file_path) {
-		return shaderFromFile(ShaderOpenGL::GlShaderType::VERTEX, file_path);
-	}
-
-	static ShaderOpenGL shaderFromFile(ShaderOpenGL::GlShaderType type, std::string file_path) {
-		std::ifstream input(file_path);
-		if (input.is_open()) {
-			std::string src((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
-			return ShaderOpenGL(type, src);
-		}
-		else {
-			throw TatorException("Unable to open file " + file_path);
-		}
-	}
-private:
-	ShaderOpenGLFactory() { }
-};
-*/
-/*
-class MaterialOption {
-public:
-	enum class Type { UNKNOWN, STRING, FLOAT, DOUBLE, VEC2, VEC3, VEC4, TEXTURE2D };
-	MaterialOption(Type type, std::string name) {
-		this->type = type;
-		this->name = name;
-	}
-protected:
-	Type type;
-	std::string name;
-};
-
-class MaterialOptionString : public MaterialOption {
-public:
-	MaterialOptionString(std::string name, std::string value)
-			: MaterialOption(Type::STRING, name) {
-		this->value = value;
-	}
-protected:
-	std::string value;
-};
-
-class MaterialOptionTexture2D : public MaterialOption {
-public:
-	MaterialOptionTexture2D(std::string name, Texture2D* value)
-			: MaterialOption(Type::TEXTURE2D, name) {
-		this->value = value;
-	}
-protected:
-	Texture2D *value;
-};
-
-class Material : public IRendererResource {
-public:
-	virtual ~Material() { }
-
-	MaterialOption& getOption(std::string name) {
-		if (options.count(name) == 0) {
-			throw std::runtime_error("Key not found in options. " + name);
-		}
-		else {
-			return options[name];
-		}
-	}
-
-	void setOption(std::string name, MaterialOption* option) {
-		options[name] = *option;
-	}
-
-protected:
-	std::map<std::string, MaterialOption> options;
-};
-*/
-
 
 enum class MaterialSettingType : int {
 	FLOAT, VEC2, VEC3, VEC4, MAT4, TEXTURE2D
@@ -376,6 +243,142 @@ protected:
 	}
 };
 
+enum class VertexAttributeType {
+	FLOAT, DOUBLE, UINT,
+};
+
+class BaseVertexAttribute {
+public:
+	BaseVertexAttribute(VertexAttributeType type, int components) {
+		this->type = type;
+		this->components = components;
+	}
+
+	int getIndex(int vertex) {
+		return vertex * this->components;
+	}
+
+	int getIndex(int vertex, int component) {
+		// TODO: Should make sure component isn't greater than count
+		//	Will have a performance impact though, not sure if it's worth it.
+		return this->getIndex(vertex) + component;
+	}
+
+	int getComponents() {
+		return components;
+	}
+
+	VertexAttributeType getType() {
+		return type;
+	}
+
+	virtual std::vector<float>& getFloat() {
+		throw std::runtime_error("VertexAttribute is not of type float");
+	}
+	virtual std::vector<double>& getDouble() {
+		throw std::runtime_error("VertexAttribute is not of type double");
+	}
+	virtual std::vector<uint32_t>& getUint() {
+		throw std::runtime_error("VertexAttribute is not of type uint32_t");
+	}
+
+protected:
+	VertexAttributeType type;	
+	int components;
+};
+
+template <typename T>
+class VertexAttribute : public BaseVertexAttribute {
+private:
+	VertexAttribute() : BaseVertexAttribute(0, 0) { }
+};
+
+template <>
+class VertexAttribute<float> : public BaseVertexAttribute {
+public:
+	VertexAttribute(int components)
+		: BaseVertexAttribute(VertexAttributeType::FLOAT, components) { }
+
+	std::vector<float>& getFloat() { return data; }
+	void set(int start_index, std::vector<float> values) {
+		auto data_it = data.begin() + start_index;
+		auto input_it = values.begin();
+		while (data_it != data.end() && input_it != values.end()) {
+			*(data_it++) = *(input_it++);
+		}
+		if (data_it != data.end() || input_it != values.end()) {
+			throw std::runtime_error("Invalid input size.");
+		}
+	}
+protected:
+	std::vector<float> data;
+};
+
+template <>
+class VertexAttribute<double> : public BaseVertexAttribute {
+public:
+	VertexAttribute(int components)
+		: BaseVertexAttribute(VertexAttributeType::DOUBLE, components) { }
+
+	std::vector<double>& getDouble() { return data; }
+protected:
+	std::vector<double> data;
+};
+
+template <>
+class VertexAttribute<uint32_t> : public BaseVertexAttribute {
+public:
+	VertexAttribute(int components)
+		: BaseVertexAttribute(VertexAttributeType::UINT, components) { }
+
+	std::vector<uint32_t>& getUint() { return data; }
+protected:
+	std::vector<uint32_t> data;
+};
+
+class VertexData {
+public:
+	VertexData() { }
+
+	template <typename T>
+	VertexAttribute<T>* addAttribute(std::string name, int components) {
+		if (this->attributes.count(name) == 0) {
+			auto v = new VertexAttribute<T>(components);
+			attributes[name] = v;
+			return v;
+		}
+		else {
+			throw std::runtime_error("VertexData attribute with name '" + name + "' already exists.");
+		}
+	}
+
+	std::vector<std::string> getAttributeNames() {
+		std::vector<std::string> keys;
+		for (auto it = attributes.begin(); it != attributes.end(); ++it) {
+			keys.push_back(it->first);
+		}
+		return keys;
+	}
+
+	BaseVertexAttribute* getAttribute(std::string name) {
+		if (attributes.count(name) != 0) {
+			return attributes[name];
+		}
+		else {
+			return NULL;
+		}
+	}
+
+	std::vector<uint32_t>& getIndices() {
+		return this->indices;
+	}
+
+protected:
+	std::map<std::string, BaseVertexAttribute*> attributes;
+	std::vector<float> data;
+	std::vector<uint32_t> indices;
+};
+
 class TexturedQuadComponent : public Component {
 public:
 	TexturedQuadComponent(GameObject* owner, Texture2D* texture) {
@@ -390,61 +393,72 @@ protected:
 	Texture2D *texture;
 };
 
-class IRenderable {
+class Renderable {
 public:
-	virtual glm::mat4 getTransform() = 0;
-	virtual void setTransform(glm::mat4 m) = 0;
-	virtual Material* getMaterial() { return NULL; }
-	virtual void setMaterial(Material* mat) {}
-	virtual void draw() = 0;
-};
+	Renderable() {
+		this->material = NULL; // TODO: default material
+	}
 
-class IQuad {
-public:
+	Renderable(Material* mat) {
+		this->material = mat;
+	}
+
 	virtual glm::mat4 getTransform() {
-		return glm::mat4();
-	}
-	virtual void draw(IQuad& q) { }
-};
-
-class Quad : public IRenderable, public IQuad {
-public:
-	Quad(IQuad *implementor) {
-		this->implementor = implementor;
-		this->material = NULL;
+		return this->transform;
 	}
 
-	Quad(IQuad *implementor, Material* material) {
-		this->implementor = implementor;
-		this->material = material;
+	virtual void setTransform(glm::mat4 m) {
+		this->transform = m;
 	}
 
-	glm::mat4 getTransform() override {
-		return transform;
+	virtual Material* getMaterial() {
+		return this->material;
 	}
 
-	void setTransform(glm::mat4 m) override {
-		transform = m;
+	virtual void setMaterial(Material* mat) {
+		this->material = mat;
 	}
 
-	Material* getMaterial() override {
-		return material;
-	}
-
-	void setMaterial(Material* material) override {
-		this->material = material;
-	}
-
-	void draw() override {
-		implementor->draw(*this);
-	}
+	virtual void draw() = 0;
 
 protected:
 	glm::mat4 transform;
 	Material* material;
-	IQuad *implementor;
 };
 
+class Mesh : public Renderable {
+public:
+	Mesh() : Renderable() {
+	}
+
+	VertexData& getData() { return data; }
+
+protected:
+	VertexData data;
+};
+
+class Quad : public Mesh {
+public:
+	Quad() : Mesh(*this) {
+		auto va = data.addAttribute<float>("position", 3);
+		va->getFloat().assign({
+			0.5f, 0.5f, 0.0f,
+			0.5f, -0.5f, 0.0f,
+			-0.5f, -0.5f, 0.0f,
+			-0.5f, 0.5f, 0.0f });
+		data.getIndices().assign({ 0, 1, 3, 1, 2, 3 });
+	}
+
+	Quad(Material* material) {
+		this->material = material;
+	}
+
+	virtual void draw() = 0;
+
+protected:
+	glm::mat4 transform;
+	Material* material;
+};
 
 class RendererFactory {
 public:
@@ -461,7 +475,7 @@ public:
 class Renderer {
 public:
 	virtual RendererFactory& getFactory() = 0;
-	virtual void draw(IRenderable& renderable) = 0;
+	virtual void draw(Renderable& renderable) = 0;
 };
 
 } // graphics

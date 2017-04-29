@@ -17,9 +17,6 @@
 	using tator::graphics::ShaderProgram;
 
 #include "tator/graphics/Renderer.hpp"
-//	using tator::graphics::Shader;
-//	using tator::graphics::ShaderOpenGL;
-//	using tator::graphics::ShaderOpenGLFactory;
 	using tator::graphics::GameObject;
 	using tator::graphics::Component;
 	using tator::graphics::TexturedQuadComponent;
@@ -47,63 +44,19 @@
 
 #include "../soil/inc/SOIL/SOIL.h"
 
-// Shaders
-GLchar *vertex_shader_source =
-"#version 330 core\n\
-layout (location=0) in vec3 position;\n\
-void main(){\n\
-gl_Position = vec4(position.x, 0.5f - position.y, position.z, 1.0);\n\
-}\0";
+#include "tator/scripting/PythonEngine.hpp"
+	using tator::scripting::PythonEngine;
 
-GLchar *fragment_shader_source =
-"#version 330 core\n\
-out vec4 color;\n\
-void main(){\n\
-color=vec4(1.0f,1.0f,1.0f,1.0f);\n\
-}\n";
-
-void compileShader(GLuint id, GLchar *src) {
-	glShaderSource(id, 1, &src, NULL);
-	glCompileShader(id);
-	GLint success;
-	glGetShaderiv(id, GL_COMPILE_STATUS, &success);
-	GLchar infoLog[512];
-	if (!success) {
-		glGetShaderInfoLog(id, sizeof(infoLog), NULL, infoLog);
-		throw TatorException(infoLog);
-	}
-}
-
-GLuint compileVertexShader(GLchar *src) {
-	GLuint id = glCreateShader(GL_VERTEX_SHADER);
-	compileShader(id, src);
-	return id;
-}
-
-GLuint compileFragmentShader(GLchar *src) {
-	GLuint id = glCreateShader(GL_FRAGMENT_SHADER);
-	compileShader(id, src);
-	return id;
-}
-
-GLuint createShaderProgram(std::initializer_list<GLuint> shaders) {
-	// Create the shader program
-	GLuint shader_program = glCreateProgram();
-	for (auto shader : shaders) {
-		glAttachShader(shader_program, shader);
-	}
-	glLinkProgram(shader_program);
-	// Validate the shader program
-	GLint success;
-	GLchar infoLog[512];
-	glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
-	if (success == GLEW_OK) {
-		return shader_program;
-	} else {
-		glGetProgramInfoLog(shader_program, 512, NULL, infoLog);
-		throw TatorException(infoLog);
-	}
-}
+#ifdef _DEBUG
+#undef _DEBUG
+#include <Python.h>
+#define _DEBUG
+#else
+#include <Python.h>
+#endif
+#include <pybind11/pybind11.h>
+#include <pybind11/eval.h>
+namespace py = pybind11;
 
 typedef struct VertexData {
 	GLfloat position[3];
@@ -126,7 +79,22 @@ VertexData makeVertexData(glm::vec3 position, glm::vec3 color, glm::vec2 tex) {
 
 GLuint screen_width = 640, screen_height = 480;
 
-int _main() {
+int _main(int argc, char **argv) {
+
+	//wchar_t *program = Py_DecodeLocale(argv[0], NULL);
+	//std::cout << "ARGV: " << argv[0] << std::endl;
+	//Py_SetPythonHome(L"C:\\Python36-32\\Lib");
+	//Py_SetPath(L"C:\\Python36-32;C:\\Python36-32\\DLLs;C:\\Python36-32\\Lib;C:\\Python36-32\\lib\\site-packages");
+	//Py_SetProgramName(L"C:\\Python36-32\\python.exe");
+	//Py_SetPath(L"C:\\Python36-32\\Lib");
+	//Py_SetPythonHome(L"Lib");
+	//Py_SetPath(L"Lib;Lib/site-packages");
+	//Py_SetPath(L";DLLs;lib;lib/site-packages");
+	//Py_Initialize();
+	//std::wcout << "PROG: " << Py_GetProgramName() << std::endl;
+	//std::wcout << "PATH: " << Py_GetPath() << std::endl;
+	//std::wcout << "HOME: " << Py_GetPythonHome() << std::endl;
+
 	//FreeConsole();
 	// Create window
 	GLFWwindow *window;
@@ -159,86 +127,17 @@ int _main() {
 
 	Material *default_mat = renderer.getFactory().createMaterial(&vs, &fs);
 
+	// Initialize python interpreter
+	PythonEngine python_engine;
+	python_engine.initialize();
+	py::dict python_globals;
+	python_globals["__builtins__"] = py::module::import("builtins");
+
 	Quad *q = renderer.getFactory().createQuad();
+	q->getData().addAttribute<float>("color", 4);
+	q->getData().getAttribute("color")->getFloat().assign(4 * 4, 0.5f);
 	q->setMaterial(default_mat);
 
-
-
-	// Compile shaders
-	//GLuint fragment_shader = compileFragmentShader(fragment_shader_source);
-	//GLuint vertex_shader = compileVertexShader(vertex_shader_source);
-	//GLuint t = glCreateShader(GL_VERTEX_SHADER);
-
-	//ShaderOpenGL fragment_shader = ShaderOpenGLFactory::fragmentShaderFromFile("Resources\\shaders\\default_fragment.glsl");
-	//ShaderOpenGL vertex_shader = ShaderOpenGLFactory::vertexShaderFromFile("Resources\\shaders\\default_vertex.glsl");
-	//std::cout << "Compiling fragment shader..." << std::endl;
-	//bool _fs = fragment_shader.compile();
-	//std::cout << "Compiling vertex shader..." << std::endl;
-	//bool _vs = vertex_shader.compile();
-
-	//std::cout << "Shaders done! FS: " << _fs << " VS: " << _vs << std::endl;
-
-	// Make shader program
-	//GLuint sprog = createShaderProgram({vertex_shader.getId(), fragment_shader.getId()});
-	//fragment_shader.destroy();
-	//vertex_shader.destroy();
-
-	/*
-	ShaderProgram sp;
-	sp.addShader(&vertex_shader);
-	sp.addShader(&fragment_shader);
-	sp.compile();
-	vertex_shader.destroy();
-	fragment_shader.destroy();
-	*/
-
-	/*
-	VertexData _vd[]{
-		makeVertexData(glm::vec3(0.5f,0.5f,0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 1.0f)),
-		makeVertexData(glm::vec3(0.5f,-0.5f,0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0, 0.0f)),
-		makeVertexData(glm::vec3(-0.5f,-0.5f,0.0f), glm::vec3(0.0f,0.0f,1.0f), glm::vec2(0.0f,0.0f)),
-		makeVertexData(glm::vec3(-0.5f,0.5f,0.0f), glm::vec3(1.0f,1.0f,0.0f), glm::vec2(0.0f,1.0f)),
-	};
-
-	char* vd = reinterpret_cast<char*>(_vd);
-	std::cout << sizeof(_vd) << " " << sizeof(VertexData) << std::endl;
-	std::cout << "BYTES: " << sizeof(_vd) * sizeof(VertexData) << std::endl;
-
-	GLuint indices[] = {
-		0, 1, 3,
-		1, 2, 3
-	};
-	// Make shapes
-	GLuint VBO, VAO, EBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-	
-	glBindVertexArray(VAO);
-		//glVertexAttribFormat(0, 3, GL_FLOAT, GL_FALSE, offsetof(VertexData, position));
-		//glVertexAttribBinding(0, 0);
-		//glVertexAttribFormat(1, 3, GL_FLOAT, GL_FALSE, offsetof(VertexData, color));
-		//glVertexAttribBinding(1, 0);
-		//glVertexAttribFormat(2, 2, GL_FLOAT, GL_FALSE, offsetof(VertexData, tex));
-		//glVertexAttribBinding(2, 0);
-		// Send vertices to GPU
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(_vd), vd, GL_STATIC_DRAW);
-			// Send indices of shape to GPU
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-			// Determine what data is sent to the vertex shader
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (GLvoid*)0);
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (GLvoid*)(3 * sizeof(GLfloat)));
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (GLvoid*)(6 * sizeof(GLfloat)));
-			glEnableVertexAttribArray(2);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0); // unbind
-	glBindVertexArray(0); // unbind
-	*/
 	// Create textures
 	
 	GLuint texture1;
@@ -255,18 +154,6 @@ int _main() {
 		SOIL_free_image_data(image);
 	glBindTexture(GL_TEXTURE_2D, 0); // unbind
 	
-
-	/*
-	int twidth, theight;
-	unsigned char *img = SOIL_load_image("Resources/Textures/vader.jpg", &twidth, &theight, 0, SOIL_LOAD_RGB);
-	std::cout << SOIL_last_result() << std::endl;
-	std::string _img((char*)img, twidth*theight * 3);
-	SOIL_free_image_data(img);
-	Texture2D *_texture1 = renderer.getFactory().createTexture(_img, twidth, theight, TextureFormat::RGB, TextureWrap::REPEAT, TextureWrap::REPEAT, TextureInterpolation::LINEAR, TextureInterpolation::LINEAR);
-	*/
-
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe
-
 	// Application loop
 
 	glm::vec3 cube_positions[] = {
@@ -281,19 +168,6 @@ int _main() {
 	glm::mat4 model;
 	glm::mat4 view = c.getViewMatrix();
 
-	std::cout << "Camera" << std::endl;
-	std::cout << "Position: " << c.getPosition().x << " " << c.getPosition().y << " " << c.getPosition().z << std::endl;
-	std::cout << "Forward: " << c.getForward().x << " " << c.getForward().y << " " << c.getForward().z << std::endl;
-	std::cout << "Up: " << c.getUp().x << " " << c.getUp().y << " " << c.getUp().z << std::endl;
-	std::cout << "--------------------------" << std::endl;
-	
-	for (int y = 0; y < 4; ++y) {
-		for (int x = 0; x < 4; ++x) {
-			std::cout << view[y][x] << " ";
-		}
-		std::cout << std::endl;
-	}
-	std::cout << std::endl << std::endl;
 
 	glm::mat4 view2 = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	for (int y = 0; y < 4; ++y) {
@@ -312,6 +186,11 @@ int _main() {
 	renderer.setProjection(projection);
 	renderer.setView(view);
 
+	//py::object scope = py::dict(); // empty scope
+	//py::eval("print('hello')", py::dict(), py::dict());
+								   //py::eval("import os\nprint(os.getcwd())", scope);
+	//py::eval_file("./Resources/scripts/main.py", scope);
+
 	while (!glfwWindowShouldClose(window)) {
 		// time per frame
 		double current_time = glfwGetTime();
@@ -327,11 +206,7 @@ int _main() {
 		// Clear backbuffer
 		glClearColor(0.1f, 0.1f, 0.1f, 1.f); // Set color to white
 		glClear(GL_COLOR_BUFFER_BIT); // Clear buffer to set clear color
-		// Draw
-		//{ auto bound=GlBoundObject({ &sp });
-			//glUseProgram(sp.getId());
-			//model = glm::translate(model, glm::vec3(0, 0, 0));
-			//model = glm::scale(model, glm::vec3(1.2f, 1.2f, 1.2f));
+	
 			GLfloat timeValue = glfwGetTime();
 			glm::mat4 model;
 			model = glm::translate(model, glm::vec3(0, 0, 0));
@@ -343,48 +218,25 @@ int _main() {
 
 			q->setTransform(model);
 			//renderer.setTime(timeValue);
-		
+
 			q->getMaterial()->set("model", q->getTransform());
 			q->getMaterial()->set("view", view);
 			q->getMaterial()->set("projection", projection);
 			q->getMaterial()->set("time", timeValue);
+			std::cout << "TIME: " << timeValue << std::endl;
+
+			q->getData().getAttribute("position")->getFloat()[0] += 0.00001f;
+			q->getData().getAttribute("position")->getFloat()[1] -= 0.00001f;
+			q->getData().getAttribute("position")->getFloat()[2] += 0.0002f;
+
 			renderer.draw(*q);
 
-			//GLint loc_model = glGetUniformLocation(sp.getId(), "model");
-			//glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(model));
-			//GLint loc_view = glGetUniformLocation(sp.getId(), "view");
-			//glUniformMatrix4fv(loc_view, 1, GL_FALSE, glm::value_ptr(view));
-			//GLint loc_projection = glGetUniformLocation(sp.getId(), "projection");
-			//glUniformMatrix4fv(loc_projection, 1, GL_FALSE, glm::value_ptr(projection));
-			//GLint colorLoc = glGetUniformLocation(sp.getId(), "time");
-
-			//glActiveTexture(GL_TEXTURE0);
-			//glBindTexture(GL_TEXTURE_2D, texture1);
-			//_texture1->prepare();
-			//glUniform1i(glGetUniformLocation(sp.getId(), "texture1"), 0);
-
-			//glUniform1f(colorLoc, timeValue);
-			//glBindVertexArray(VAO); // bind
-			/*
-			for (glm::vec3 p : cube_positions) {
-				glm::mat4 _m;
-				_m = glm::translate(_m, p);
-				_m = glm::rotate(_m, rotation, glm::vec3(0,1,0));
-				_m = glm::rotate(_m, r1, glm::vec3(1, 0, 0));
-				_m = glm::rotate(_m, r2, glm::vec3(0, 0, 1));
-				glUniformMatrix4fv(loc_model, 1, GL_FALSE, glm::value_ptr(_m));
-				glBindVertexArray(VAO);
-				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-				glBindVertexArray(0);
-			} */
 			rotation += 0.001f;
 			if (rotation >= 360) { rotation = 0.0f; }
 			r1 += 0.1f;
 			if (r1 >= 360) { r1 = 0.0f; }
 			r2 += 0.05f;
 			if (r2 >= 360) { r2 = 0.0f; }
-			//glBindVertexArray(0); // unbind
-		//}
 
 		// Display
 		glfwSwapBuffers(window);
@@ -394,12 +246,13 @@ int _main() {
 	return 0;
 }
 
-int main(void) {
+int main(int argc, char** argv) {
 	try {
-		return _main();
+		return _main(argc, argv);
 	}
 	catch (std::exception& exc) {
 		std::cout << "Unhandled exception: " << exc.what() << std::endl;
 		throw exc;
 	}
+
 }

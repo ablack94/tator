@@ -8,7 +8,6 @@ namespace tator {
 namespace system {
 
 
-
 }
 }
 #endif

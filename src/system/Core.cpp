@@ -4,7 +4,6 @@
 #include "tator/system/Core.hpp"
 	using tator::system::TatorCore;
 
-#include "tator/graphics/gl.hpp"
 
 TatorCore::TatorCore() { }
 

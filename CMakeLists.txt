@@ -1,11 +1,12 @@
+# Andrew Black
+# June 18, 2017
 cmake_minimum_required(VERSION 2.8)
 project(tator)
 
 ##########################
 # SETTINGS
 ##########################
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE) # Should be in windows-specific block?
 message(STATUS "OUTPUT: ${CMAKE_CURRENT_BINARY_DIR}")
 
 ##########################
@@ -35,6 +36,8 @@ find_package(OpenGL REQUIRED) # OpenGL
 # ---- Lua ----
 set(LUA_LIBS ${TATOR_DEPS_DIR}/lua/lua53.lib)
 include_directories(${TATOR_DEPS_DIR}/lua/include)
+# ---- hmap ----
+add_subdirectory(${TATOR_DEPS_DIR}/hmap)
 
 # ---- Assimp ----
 #add_subdirectory(${TATOR_DEPS_DIR}/assimp)
@@ -55,28 +58,85 @@ set(TATOR_SCRIPTING_INCLUDE_DIR ${_TATOR_INCLUDE_DIR}/scripting)
 ##########################
 
 # ---- Graphics module ----
-set(TATOR_GRAPHICS_SOURCE
-	${TATOR_SOURCE_DIR}/graphics/gl.cpp
-	${TATOR_SOURCE_DIR}/graphics/OpenGLRenderer.cpp
-	${TATOR_SOURCE_DIR}/graphics/Shader.cpp
-	${TATOR_SOURCE_DIR}/graphics/ShaderProgram.cpp
-	${TATOR_SOURCE_DIR}/graphics/Camera.cpp
-	${TATOR_SOURCE_DIR}/graphics/Mesh.cpp
-	${TATOR_SOURCE_DIR}/graphics/Renderable.cpp
-	${TATOR_SOURCE_DIR}/graphics/StandardMesh.cpp
+# Tator graphics abstractions
+set(TATOR_GRAPHICS_ABSTRACT_ROOT_HEADERS
+	${_TATOR_INCLUDE_DIR}/graphics/IRenderable.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/PrimitiveFactory.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/RenderingEngine.hpp
 	)
+set(TATOR_GRAPHICS_ABSTRACT_DATA_HEADERS
+	${_TATOR_INCLUDE_DIR}/graphics/data/IVertexData.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/data/VertexAttribute.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/data/VertexAttributeInfo.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/data/VertexData.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/data/VertexDataHint.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/data/BufferedVertexData.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/data/AbstractBufferedVertexDataDispatcher.hpp
+	)
+set(TATOR_GRAPHICS_ABSTRACT_MATERIAL_HEADERS
+	${_TATOR_INCLUDE_DIR}/graphics/material/BaseMaterialSetting.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/material/AbstractMaterialSettingDispatcher.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/material/NumericMaterialSetting.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/material/Material.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/material/AbstractMaterialFactory.hpp
+	)
+set(TATOR_GRAPHICS_ABSTRACT_VIEW_HEADERS
+	${_TATOR_INCLUDE_DIR}/graphics/view/Camera.hpp
+	)
+# OpenGL implementation
+set(TATOR_GRAPHICS_OPENGL_ROOT_HEADERS
+	${_TATOR_INCLUDE_DIR}/graphics/impl/opengl/OpenGlMaterialFactory.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/impl/opengl/OpenGLRenderingEngine.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/impl/opengl/OpenGLMaterial.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/impl/opengl/OpenGLMaterialSettingDispatcher.hpp
+	)
+set(TATOR_GRAPHICS_OPENGL_DETAIL_HEADERS
+	${_TATOR_INCLUDE_DIR}/graphics/impl/opengl/detail/Shader.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/impl/opengl/detail/OpenGLObject.hpp
+	${_TATOR_INCLUDE_DIR}/graphics/impl/opengl/detail/OpenGLObjectManager.hpp
+	)
+# All
 set(TATOR_GRAPHICS_HEADERS
-	${_TATOR_INCLUDE_DIR}/graphics/gl.hpp
-	${_TATOR_INCLUDE_DIR}/graphics/Renderer.hpp
-	${_TATOR_INCLUDE_DIR}/graphics/OpenGLRenderer.hpp
-	${_TATOR_INCLUDE_DIR}/graphics/Shader.hpp
-	${_TATOR_INCLUDE_DIR}/graphics/ShaderProgram.hpp
-	${_TATOR_INCLUDE_DIR}/graphics/Camera.hpp
-	${_TATOR_INCLUDE_DIR}/graphics/Mesh.hpp
-	${_TATOR_INCLUDE_DIR}/graphics/Renderable.hpp
-	${_TATOR_INCLUDE_DIR}/graphics/StandardMesh.hpp
+	${TATOR_GRAPHICS_ABSTRACT_ROOT_HEADERS}
+	${TATOR_GRAPHICS_ABSTRACT_DATA_HEADERS}
+	${TATOR_GRAPHICS_ABSTRACT_MATERIAL_HEADERS}
+	${TATOR_GRAPHICS_ABSTRACT_VIEW_HEADERS}
+	${TATOR_GRAPHICS_OPENGL_ROOT_HEADERS}
+	${TATOR_GRAPHICS_OPENGL_DETAIL_HEADERS}
 	)
-source_group("graphics" FILES ${TATOR_GRAPHICS_HEADERS} ${TATOR_GRAPHICS_SOURCE})
+# Groups
+source_group("graphics" FILES ${TATOR_GRAPHICS_ABSTRACT_ROOT_HEADERS})
+source_group("graphics\\data" FILES ${TATOR_GRAPHICS_ABSTRACT_DATA_HEADERS})
+source_group("graphics\\material" FILES ${TATOR_GRAPHICS_ABSTRACT_MATERIAL_HEADERS})
+source_group("graphics\\view" FILES ${TATOR_GRAPHICS_ABSTRACT_VIEW_HEADERS})
+source_group("graphics\\opengl" FILES ${TATOR_GRAPHICS_OPENGL_ROOT_HEADERS})
+source_group("graphics\\opengl\\detail" FILES ${TATOR_GRAPHICS_OPENGL_DETAIL_HEADERS})
+
+#set(TATOR_GRAPHICS_SOURCE
+#	${TATOR_SOURCE_DIR}/graphics/impl/opengl/gl.cpp
+#	${TATOR_SOURCE_DIR}/graphics/OpenGLRenderer.cpp
+#	${TATOR_SOURCE_DIR}/graphics/Shader.cpp
+#	${TATOR_SOURCE_DIR}/graphics/ShaderProgram.cpp
+#	${TATOR_SOURCE_DIR}/graphics/Mesh.cpp
+#	${TATOR_SOURCE_DIR}/graphics/Renderable.cpp
+#	${TATOR_SOURCE_DIR}/graphics/StandardMesh.cpp
+#	)
+#set(TATOR_GRAPHICS_HEADERS
+#	${_TATOR_INCLUDE_DIR}/graphics/gl.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/Renderer.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/OpenGLRenderer.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/Shader.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/ShaderProgram.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/Camera.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/Mesh.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/Renderable.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/StandardMesh.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/Material.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/VertexData.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/Texture2D.hpp
+#	${_TATOR_INCLUDE_DIR}/graphics/Util.hpp
+#	)
+#source_group("graphics" FILES ${TATOR_GRAPHICS_HEADERS} ${TATOR_GRAPHICS_SOURCE})
 	
 # ---- System module ----
 set(TATOR_SYSTEM_SOURCE
@@ -100,16 +160,29 @@ set(TATOR_SCRIPTING_HEADERS
 	)
 source_group("scripting" FILES ${TATOR_SCRIPTING_HEADERS} ${TATOR_SCRIPTING_SOURCE})
 	
+# ---- Core module ----
+set(TATOR_CORE_SOURCE
+	)
+set(TATOR_CORE_HEADERS
+	${_TATOR_INCLUDE_DIR}/core/TatorEngine.hpp
+	${_TATOR_INCLUDE_DIR}/core/Window.hpp
+	${_TATOR_INCLUDE_DIR}/core/TypeId.hpp
+	${_TATOR_INCLUDE_DIR}/core/HeteroMap.hpp
+	)
+source_group("core" FILES ${TATOR_CORE_SOURCE} ${TATOR_CORE_HEADERS})
+	
 # ---- All modules ----
 set(TATOR_SOURCES
 	${TATOR_GRAPHICS_SOURCE}
 	${TATOR_SYSTEM_SOURCE}
 	${TATOR_SCRIPTING_SOURCE}
+	${TATOR_CORE_SOURCE}
 	)
 set(TATOR_HEADERS
 	${TATOR_GRAPHICS_HEADERS}
 	${TATOR_SYSTEM_HEADERS}
 	${TATOR_SCRIPTING_HEADERS}
+	${TATOR_CORE_HEADERS}
 	)
 
 ##########################
@@ -124,6 +197,7 @@ target_include_directories(tator SYSTEM PUBLIC
 	${GLEW_INCLUDE_DIRS}
 	${PYBIND11_INCLUDE_DIR} # header only library
 	${PYTHON_INCLUDE_DIRS}
+	${TATOR_DEPS_DIR}/hmap/include
 	glm
 	glfw
 	)
